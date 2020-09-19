@@ -137,7 +137,7 @@ def household_generation(p_d):
     no_precedences = len(predecessors)
     maximum_demand = max(demands) * max_demand_multiplier
 
-    print(" --- Household made ---")
+    # print(" --- Household made ---")
 
     return preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
            no_precedences, predecessors, successors, prec_delays, maximum_demand, aggregated_loads
@@ -172,7 +172,7 @@ def area_generation():
         households[household_key]["max", "preferred"] = max(household_profile)
         households[household_key]["max","limit"] = max_demand
 
-        return households
+    return households
 
 
 def data_preprocessing(prices_input, earliest_starts, latest_ends, durations, preferred_starts, care_factors, demands,
@@ -395,3 +395,16 @@ def household_scheduling_subproblem(household, prices_day, model_file, model_typ
     return sactual_starts_ogsa, optimistic_d_profile, actual_starts_op, optimised_d_profile
 
 
+def pricing_master_problem():
+
+    return True
+
+
+def iteration():
+
+    # initialisation
+    households = area_generation()
+
+    return True
+
+iteration()
