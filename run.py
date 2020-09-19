@@ -36,7 +36,9 @@ def read_data():
     solvers = dict()
     solvers["CP"] = "Gecode"
 
-    return prices, models, solvers
+    pricing_table = []
+
+    return pricing_table, models, solvers
 
 
 def task_generation(mode_value, l_demands, p_d_short):
@@ -403,7 +405,17 @@ def pricing_master_problem():
 def iteration():
 
     # initialisation
+    pricing_table, models, solvers = read_data()
     households = area_generation()
+
+    # pricing master problem
+
+
+    # household scheduling problem
+
+
+    
+
 
     return True
 
