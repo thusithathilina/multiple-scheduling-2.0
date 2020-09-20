@@ -4,7 +4,7 @@ import numpy as np
 import random as r
 from csv import reader
 from more_itertools import grouper
-
+from bisect import bisect_left, bisect_right
 # from pandas import DataFrame, IndexSlice, date_range, Series, concat
 from numpy import genfromtxt
 from time import strftime, localtime
@@ -22,6 +22,9 @@ max_demand_multiplier = no_tasks
 care_f_max = 10
 care_f_weight = 800
 
+pricing_table_weight = 1.0
+cost_type = "linear" # or "piece-wise linear"
+
 var_choices = ""
 const_choices = ""
 
@@ -30,7 +33,7 @@ file_cp_ini = 'models/Household-cp.mzn'
 file_pricing_table = 'inputs/pricing_table_0.csv'
 
 
-def read_files(f_cp_pre, f_cp_ini, f_pricing_table):
+def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit):
 
     models = dict()
     models["CP"] = dict()
@@ -40,16 +43,19 @@ def read_files(f_cp_pre, f_cp_ini, f_pricing_table):
     solvers = dict()
     solvers["CP"] = "Gecode"
 
-    pricing_table = []
+    demand_levels = []
+    price_levels = []
+    demand_level_scale = demand_limit * pricing_table_weight
     with open(f_pricing_table, 'r') as csvfile:
         csvreader = reader(csvfile, delimiter=',', quotechar='|')
 
         for row in csvreader:
             pricing_table_row = list(map(float, row))
-            # lookup_row = ', '.join(row)
-            pricing_table.append(pricing_table_row)
+            price_levels.append(pricing_table_row[0])
+            demand_levels.append([round(x * demand_level_scale, -3) for x in pricing_table_row[1:]])
+    demand_table = zip(*demand_levels)
 
-    return models, solvers, pricing_table
+    return models, solvers, price_levels, demand_table
 
 
 def task_generation(mode_value, l_demands, p_d_short):
@@ -155,7 +161,7 @@ def household_generation(p_d):
            no_precedences, predecessors, successors, prec_delays, maximum_demand, aggregated_loads
 
 
-def area_generation(num_intervals):
+def area_generation(num_intervals, num_intervals_periods):
     probability_demand_profile = genfromtxt('inputs/probability.csv', delimiter=',', dtype="float")
 
     households = dict()
@@ -186,7 +192,16 @@ def area_generation(num_intervals):
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
-    return households, area_demand_profile
+    # convert demand profile from interval-based to period-based
+
+    area = dict()
+    area["profile"] = dict()
+    area["profile"]["interval"] = dict()
+    area["profile"]["interval"][0] = area_demand_profile
+    area["profile"]["period"] = dict()
+    area["profile"]["period"][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+
+    return households, area
 
 
 def data_preprocessing(prices_input, earliest_starts, latest_ends, durations, preferred_starts, care_factors, demands,
@@ -402,24 +417,36 @@ def household_scheduling_subproblem\
     return optimistic_starts, optimistic_profile, optimal_starts, optimal_profile
 
 
-def pricing_cost(pricing_table, demand_profile):
+def pricing_cost(price_levels, demand_table, demand_profile, cost_function_type):
+
+    price_day = []
     cost = 0
+    for d, demand_level in zip(demand_profile, demand_table):
+        level = bisect_left(demand_level, d)
+        if level != len(demand_level):
+            price = price_levels[level]
+        else:
+            price = price_levels[-1]
+        price_day.append(price)
 
+        if "piece-wise" in cost_function_type and level > 0:
+            cost += demand_level[0] * price_levels[0]
+            cost += (d - demand_level[level - 1]) * price
+            cost += sum([(demand_level[i] - demand_level[i-1]) * price_levels[i] for i in range(1, level)])
+        else:
+            cost += d * price
 
-
-    return True
+    return price_day, cost
 
 
 def pricing_fw():
     return True
 
 
-def pricing_master_problem(pricing_table, demand_profile_interval, num_intervals_periods):
+def pricing_master_problem(num_periods, price_levels, demand_table, demand_profile, cost_type):
 
-    # convert demand profile from interval-based to period-based
-    demand_profile_period = [sum(x) for x in grouper(demand_profile_interval, num_intervals_periods)]
-
-    price_day, cost = pricing_cost(pricing_table, demand_profile_period)
+    # compute the total consumption cost and the price
+    price_day, cost = pricing_cost(price_levels, demand_table, demand_profile, cost_type)
 
     step_size = 0
 
@@ -428,13 +455,23 @@ def pricing_master_problem(pricing_table, demand_profile_interval, num_intervals
 
 def iteration():
     # initialisation
-    models, solvers, pricing_table = read_files(file_cp_pre, file_cp_ini, file_pricing_table)
-    households, area_demand_profile = area_generation(no_intervals)
+    households, area = area_generation(no_intervals, no_intervals_periods)
+    area_demand_profile = area["profile"]["period"][0]
+    area_demand_max = max(area_demand_profile)
+    models, solvers, price_levels, demand_table \
+        = read_data(file_cp_pre, file_cp_ini, file_pricing_table, area_demand_max)
 
-    # pricing master problem
-    prices, step_size = pricing_master_problem(pricing_table, area_demand_profile, no_intervals_periods)
+    itr = 0
+    while True:
+        # pricing master problem
+        prices, step_size \
+            = pricing_master_problem(no_periods, price_levels, demand_table, area_demand_profile, cost_type)
 
-    # household scheduling problem
+        # household scheduling problem
+
+
+        # next iteration
+        itr += 1
 
     return True
 
