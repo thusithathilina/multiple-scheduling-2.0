@@ -439,18 +439,25 @@ def pricing_cost(price_levels, demand_table, demand_profile, cost_function_type)
     return price_day, cost
 
 
-def pricing_fw():
-    return True
+def pricing_fw(demand_profile_pre, demand_profile_new):
+    step_size = 0
+    demand_profile_fw = demand_profile_pre
+
+    return step_size, demand_profile_fw
 
 
-def pricing_master_problem(num_periods, price_levels, demand_table, demand_profile, cost_type):
-
-    # compute the total consumption cost and the price
-    price_day, cost = pricing_cost(price_levels, demand_table, demand_profile, cost_type)
-
+def pricing_master_problem(price_levels, demand_table, demand_profile_pre, demand_profile_new, cost_type):
+    demand_profile_fw = demand_profile_new
     step_size = 0
 
-    return price_day, step_size
+    # apply the FW algorithm
+    if demand_profile_pre is not None:
+        step_size, demand_profile_fw = pricing_fw(demand_profile_pre, demand_profile_new)
+
+    # compute the total consumption cost and the price
+    price_day, cost = pricing_cost(price_levels, demand_table, demand_profile_fw, cost_type)
+
+    return demand_profile_fw, step_size, price_day
 
 
 def iteration():
@@ -462,10 +469,13 @@ def iteration():
         = read_data(file_cp_pre, file_cp_ini, file_pricing_table, area_demand_max)
 
     itr = 0
+    demand_profile_pre = None
+    demand_profile_new = area_demand_profile
     while True:
         # pricing master problem
-        prices, step_size \
-            = pricing_master_problem(no_periods, price_levels, demand_table, area_demand_profile, cost_type)
+        demand_profile_fw, step_size, price_day \
+            = pricing_master_problem(price_levels, demand_table, demand_profile_pre, demand_profile_new, cost_type)
+        demand_profile_pre = demand_profile_fw
 
         # household scheduling problem
 
