@@ -451,7 +451,7 @@ def pricing_fw(demand_profile_pre, demand_profile_new, demand_table):
 
         if dd != 0:
             dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
-            step = (dl - dp)/(dd)
+            step = (dl - dp)/dd
 
         step_profile.append(step)
     best_step_size = min(step_profile)
