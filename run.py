@@ -4,7 +4,8 @@ import numpy as np
 import random as r
 from csv import reader
 from more_itertools import grouper
-from bisect import bisect_left, bisect_right
+from bisect import bisect_left
+from multiple.cfunctions import find_ge, find_le
 # from pandas import DataFrame, IndexSlice, date_range, Series, concat
 from numpy import genfromtxt
 from time import strftime, localtime
@@ -417,7 +418,7 @@ def household_scheduling_subproblem\
     return optimistic_starts, optimistic_profile, optimal_starts, optimal_profile
 
 
-def pricing_cost(price_levels, demand_table, demand_profile, cost_function_type):
+def pricing_cost(demand_profile, price_levels, demand_table, cost_function_type):
 
     price_day = []
     cost = 0
@@ -439,23 +440,37 @@ def pricing_cost(price_levels, demand_table, demand_profile, cost_function_type)
     return price_day, cost
 
 
-def pricing_fw(demand_profile_pre, demand_profile_new):
-    step_size = 0
+def pricing_fw(demand_profile_pre, demand_profile_new, demand_table):
+    best_step_size = 1
     demand_profile_fw = demand_profile_pre
 
-    return step_size, demand_profile_fw
+    step_profile = []
+    for dp, dn, d_levels in zip(demand_profile_pre, demand_profile_new, demand_table):
+        step = 1
+        dd = dn - dp
+
+        if dd != 0:
+            dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
+            step = (dl - dp)/(dd)
+
+        step_profile.append(step)
+    best_step_size = min(step_profile)
+
+    demand_profile_fw = [dp + (dn - dp) * best_step_size for dp, dn in zip(demand_profile_pre, demand_profile_new)]
+
+    return best_step_size, demand_profile_fw
 
 
 def pricing_master_problem(price_levels, demand_table, demand_profile_pre, demand_profile_new, cost_type):
+    step_size = 1
     demand_profile_fw = demand_profile_new
-    step_size = 0
 
     # apply the FW algorithm
     if demand_profile_pre is not None:
-        step_size, demand_profile_fw = pricing_fw(demand_profile_pre, demand_profile_new)
+        step_size, demand_profile_fw = pricing_fw(demand_profile_pre, demand_profile_new, demand_table)
 
     # compute the total consumption cost and the price
-    price_day, cost = pricing_cost(price_levels, demand_table, demand_profile_fw, cost_type)
+    price_day, cost = pricing_cost(demand_profile_fw, price_levels, demand_table, cost_type)
 
     return demand_profile_fw, step_size, price_day
 
