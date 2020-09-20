@@ -2,15 +2,16 @@ from minizinc import *
 from numpy import sqrt, pi, random
 import numpy as np
 import random as r
+from csv import reader
+from more_itertools import grouper
 
-from pandas import DataFrame, IndexSlice, date_range, Series, concat
+# from pandas import DataFrame, IndexSlice, date_range, Series, concat
 from numpy import genfromtxt
 from time import strftime, localtime
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 import timeit
-
 
 no_intervals = 144
 no_periods = 48
@@ -24,25 +25,34 @@ care_f_weight = 800
 var_choices = ""
 const_choices = ""
 
+file_cp_pre = 'models/Household-cp-pre.mzn'
+file_cp_ini = 'models/Household-cp.mzn'
+file_pricing_table = 'inputs/pricing_table_0.csv'
 
-def read_data():
-    prices = genfromtxt('inputs/prices.csv', delimiter=',', dtype="float").astype(int) # in cents
+
+def read_files(f_cp_pre, f_cp_ini, f_pricing_table):
 
     models = dict()
     models["CP"] = dict()
-    models["CP"]["pre"] = 'models/Household-cp-pre.mzn'
-    models["CP"]["init"] = 'models/Household-cp.mzn'
+    models["CP"]["pre"] = f_cp_pre
+    models["CP"]["init"] = f_cp_ini
 
     solvers = dict()
     solvers["CP"] = "Gecode"
 
     pricing_table = []
+    with open(f_pricing_table, 'r') as csvfile:
+        csvreader = reader(csvfile, delimiter=',', quotechar='|')
 
-    return pricing_table, models, solvers
+        for row in csvreader:
+            pricing_table_row = list(map(float, row))
+            # lookup_row = ', '.join(row)
+            pricing_table.append(pricing_table_row)
+
+    return models, solvers, pricing_table
 
 
 def task_generation(mode_value, l_demands, p_d_short):
-
     # job consumption per hour
     demand = r.choice(l_demands)
     demand = int(demand * 1000)
@@ -57,7 +67,7 @@ def task_generation(mode_value, l_demands, p_d_short):
     while p_start + duration - 1 >= no_intervals - 1 or p_start < 0:
         middle_point = int(np.random.choice(a=no_periods, size=1, p=p_d_short)[0]
                            * no_intervals_periods
-                           + np.random.random_integers(low=-2, high=2))
+                           + np.random.random_integers(-2, 3))
         p_start = middle_point - int(duration / 2)
 
     # job earliest starting time
@@ -145,13 +155,13 @@ def household_generation(p_d):
            no_precedences, predecessors, successors, prec_delays, maximum_demand, aggregated_loads
 
 
-def area_generation():
+def area_generation(num_intervals):
     probability_demand_profile = genfromtxt('inputs/probability.csv', delimiter=',', dtype="float")
 
     households = dict()
+    area_demand_profile = [0] * num_intervals
 
     for h in range(no_households):
-
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
         num_precedences, predecessors, successors, prec_delays, max_demand, household_profile \
             = household_generation(probability_demand_profile)
@@ -172,9 +182,11 @@ def area_generation():
 
         households[household_key]["profile", "preferred"] = household_profile
         households[household_key]["max", "preferred"] = max(household_profile)
-        households[household_key]["max","limit"] = max_demand
+        households[household_key]["max", "limit"] = max_demand
 
-    return households
+        area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
+
+    return households, area_demand_profile
 
 
 def data_preprocessing(prices_input, earliest_starts, latest_ends, durations, preferred_starts, care_factors, demands,
@@ -193,8 +205,8 @@ def data_preprocessing(prices_input, earliest_starts, latest_ends, durations, pr
     return run_costs
 
 
-def optimistic_search(num_intervals, num_tasks, durations, demands, predecessors, successors,
-                      prec_delays, max_demand, run_costs, preferred_starts, latest_ends):
+def household_heuristic_solving(num_intervals, num_tasks, durations, demands, predecessors, successors,
+                                prec_delays, max_demand, run_costs, preferred_starts, latest_ends):
     start_time = timeit.default_timer()
 
     actual_starts = []
@@ -286,73 +298,73 @@ def optimistic_search(num_intervals, num_tasks, durations, demands, predecessors
     return actual_starts, household_profile, obj, elapsed
 
 
-def optimal_solving(no_intervals, prices_day, preferred_starts,
-                    no_tasks, earliest_starts, latest_ends, durations,
-                    demands, care_factors, no_precedences, predecessors,
-                    successors, prec_delays, max_demand,
-                    model_file, solver_choice, model_type, solver_type,
-                    run_costs, search, care_f_weight):
+def household_optimal_solving \
+                (num_intervals, num_tasks, prices_day, preferred_starts, earliest_starts, latest_ends, durations,
+                 demands, care_factors, no_precedences, predecessors, successors, prec_delays, max_demand, model_file,
+                 solver_choice, model_type, solver_type, run_costs, search, cf_weight):
+    # solve problem
+    model = Model(model_file)
+    gecode = Solver.lookup(solver_choice)
+    ins = Instance(gecode, model)
 
-    sing_dsp = Instance([model_file])
-    sing_dsp["num_intervals"] = no_intervals
-    sing_dsp["num_tasks"] = no_tasks
-    sing_dsp["durations"] = durations
-    sing_dsp["demands"] = demands
-    sing_dsp["num_precedences"] = no_precedences
-    sing_dsp["predecessors"] = [p + 1 for p in predecessors]
-    sing_dsp["successors"] = [s + 1 for s in successors]
-    sing_dsp["prec_delays"] = prec_delays
-    sing_dsp["max_demand"] = max_demand
+    ins["num_intervals"] = num_intervals
+    ins["num_tasks"] = num_tasks
+    ins["durations"] = durations
+    ins["demands"] = demands
+    ins["num_precedences"] = no_precedences
+    ins["predecessors"] = [p + 1 for p in predecessors]
+    ins["successors"] = [s + 1 for s in successors]
+    ins["prec_delays"] = prec_delays
+    ins["max_demand"] = max_demand
 
     if "ini" in model_type.lower():
-        sing_dsp["prices"] = prices_day
-        sing_dsp["preferred_starts"] = [ps + 1 for ps in preferred_starts]
-        sing_dsp["earliest_starts"] = [es + 1 for es in earliest_starts]
-        sing_dsp["latest_ends"] = [le + 1 for le in latest_ends]
-        sing_dsp["care_factors"] = [cf * care_f_weight for cf in care_factors]
+        ins["prices"] = prices_day
+        ins["preferred_starts"] = [ps + 1 for ps in preferred_starts]
+        ins["earliest_starts"] = [es + 1 for es in earliest_starts]
+        ins["latest_ends"] = [le + 1 for le in latest_ends]
+        ins["care_factors"] = [cf * cf_weight for cf in care_factors]
     else:
-        sing_dsp["run_costs"] = run_costs
+        ins["run_costs"] = run_costs
 
-    sing_dsp.add_to_model("solve ")
+    model.add_string("solve ")
     if solver_choice == "Gecode":
-        sing_dsp.add_to_model(":: {} ".format(search))
-    sing_dsp.add_to_model("minimize obj;")
+        model.add_string(":: {} ".format(search))
+    model.add_string("minimize obj;")
 
-    solver = load_solver(solver_choice.lower())
+    # solver = load_solver(solver_choice.lower())
 
     # if solver_choice == "Chuffed" or "ORtools":
     #     result = solver.solve(sing_dsp, tags=[s_type], free_search=True)
     # else:
     #     result = solver.solve(sing_dsp, tags=[s_type])
     #
-    result = solver.solve(sing_dsp, tags=[solver_type])
-    # result = solver.solve(sing_dsp)
+    result = ins.solve()
 
-    # print(solver_choice)
+    # process results
+    sol = result._solutions[-1].assignments
+    obj = result._solutions[-1].objective
+    run_time = result._solutions[-1].statistics['time'].microseconds / 1000
+    solutions = list(sol.values())[0]
 
-    return result
-
-
-def optimised_profile(solutions, s_type, demands, durations):
-    solutions = list(solutions.values())[0]
-
-    if s_type.lower() == "mip":
+    if solver_type.lower() == "mip":
         actual_starts = [sum([i * int(v) for i, v in enumerate(row)]) for row in solutions]
     else:
         # need to change the index back to starting from 0!!!!!
         actual_starts = [int(a) - 1 for a in solutions]
 
-    optimised_demand_profile = [0] * no_intervals
-    for demand, duration, a_start, i in zip(demands, durations, actual_starts, range(no_tasks)):
+    optimal_demand_profile = [0] * num_intervals
+    for demand, duration, a_start, i in zip(demands, durations, actual_starts, range(num_tasks)):
         for t in range(a_start, a_start + duration):
-            optimised_demand_profile[t] += demand
+            optimal_demand_profile[t] += demand
 
-    return optimised_demand_profile, actual_starts
+    return optimal_demand_profile, actual_starts
 
 
-def household_scheduling_subproblem(household, prices_day, model_file, model_type, solver_type, solver_choice):
-    if np.isnan(prices_day[-1]) or len(prices_day) == no_periods:
-        prices_day = [int(p) for p in prices_day[:no_periods] for _ in range(no_intervals_periods)]
+def household_scheduling_subproblem\
+                (num_intervals, num_tasks, num_periods, num_intervals_periods, household, prices_day, model_file,
+                 model_type, solver_type, solver_choice):
+    if np.isnan(prices_day[-1]) or len(prices_day) == num_periods:
+        prices_day = [int(p) for p in prices_day[:num_periods] for _ in range(num_intervals_periods)]
     else:
         prices_day = [int(p) for p in prices_day]
 
@@ -366,57 +378,81 @@ def household_scheduling_subproblem(household, prices_day, model_file, model_typ
     successors = household["succs"]
     prec_delays = household["prec_delays"]
     no_precedences = household["no_prec"]
-    max_demand = household["max","limit"]
+    max_demand = household["max", "limit"]
     run_costs = data_preprocessing(prices_day, earliest_starts, latest_ends, durations, preferred_starts,
                                    care_factors, demands, care_f_weight)
 
     # heuristics
-    sactual_starts_ogsa, optimistic_d_profile, obj_ogsa, run_time_ogsa \
-        = optimistic_search(no_intervals, no_tasks, durations, demands, predecessors, successors,
-                            prec_delays, max_demand, run_costs[:], preferred_starts, latest_ends)
+    optimistic_starts, optimistic_profile, obj_ogsa, run_time_ogsa \
+        = household_heuristic_solving(num_intervals, num_tasks, durations, demands, predecessors, successors,
+                                      prec_delays, max_demand, run_costs[:], preferred_starts, latest_ends)
 
     # solver
     obj = 0
-    sol = [0] * no_intervals
+    sol = [0] * num_intervals
     search = "int_search(actual_starts, {}, {}, complete)".format(var_choices, const_choices)
-    solver_results = optimal_solving(no_intervals, prices_day, preferred_starts,
-                                     no_tasks, earliest_starts, latest_ends, durations,
-                                     demands, care_factors, no_precedences, predecessors,
-                                     successors, prec_delays, max_demand,
-                                     model_file, solver_choice, model_type, solver_type,
-                                     run_costs[:], search, care_f_weight)
-    try:
-        sol = solver_results._solutions[-1].assignments
-        obj = solver_results._solutions[-1].objective
-        run_time = solver_results._solutions[-1].statistics['time'].microseconds / 1000
-    except:
-        print("error")
-    optimised_d_profile, actual_starts_op = optimised_profile(sol, solver_type, demands, durations)
+    optimal_profile, optimal_starts \
+        = household_optimal_solving(num_intervals, num_tasks, prices_day, preferred_starts,
+                                    earliest_starts, latest_ends, durations,
+                                    demands, care_factors, no_precedences, predecessors,
+                                    successors, prec_delays, max_demand,
+                                    model_file, solver_choice, model_type, solver_type,
+                                    run_costs[:], search, care_f_weight)
+
+    return optimistic_starts, optimistic_profile, optimal_starts, optimal_profile
 
 
-    return sactual_starts_ogsa, optimistic_d_profile, actual_starts_op, optimised_d_profile
+def pricing_cost(pricing_table, demand_profile):
+    cost = 0
 
 
-def pricing_master_problem():
 
     return True
+
+
+def pricing_fw():
+    return True
+
+
+def pricing_master_problem(pricing_table, demand_profile_interval, num_intervals_periods):
+
+    # convert demand profile from interval-based to period-based
+    demand_profile_period = [sum(x) for x in grouper(demand_profile_interval, num_intervals_periods)]
+
+    price_day, cost = pricing_cost(pricing_table, demand_profile_period)
+
+    step_size = 0
+
+    return price_day, step_size
 
 
 def iteration():
-
     # initialisation
-    pricing_table, models, solvers = read_data()
-    households = area_generation()
+    models, solvers, pricing_table = read_files(file_cp_pre, file_cp_ini, file_pricing_table)
+    households, area_demand_profile = area_generation(no_intervals)
 
     # pricing master problem
-
+    prices, step_size = pricing_master_problem(pricing_table, area_demand_profile, no_intervals_periods)
 
     # household scheduling problem
 
-
-    
-
-
     return True
 
+
 iteration()
+
+# def optimised_profile(solutions, s_type, demands, durations):
+#     solutions = list(solutions.values())[0]
+#
+#     if s_type.lower() == "mip":
+#         actual_starts = [sum([i * int(v) for i, v in enumerate(row)]) for row in solutions]
+#     else:
+#         # need to change the index back to starting from 0!!!!!
+#         actual_starts = [int(a) - 1 for a in solutions]
+#
+#     optimised_demand_profile = [0] * no_intervals
+#     for demand, duration, a_start, i in zip(demands, durations, actual_starts, range(no_tasks)):
+#         for t in range(a_start, a_start + duration):
+#             optimised_demand_profile[t] += demand
+#
+#     return optimised_demand_profile, actual_starts
