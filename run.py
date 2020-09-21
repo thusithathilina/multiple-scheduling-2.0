@@ -74,34 +74,26 @@ def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit):
 
 
 def task_generation(num_intervals, num_periods, num_intervals_periods, mode_value, l_demands, p_d_short):
-    # job consumption per hour
+    # generation - demand
     demand = r.choice(l_demands)
     demand = int(demand * 1000)
 
-    # job earliest starting time
-    e_start = 0
-    # e_start = r.randint(0, max(p_start - 1, 0))
-
-    # job latest finish time
-    l_finish = num_intervals - 1
-    # l_finish = r.randint(p_start + duration, min(no_intervals - 1, p_start + duration))
-
-    # job duration
+    # generation - duration
     duration = max(1, int(random.rayleigh(mode_value, 1)[0]))
-    # while duration == 0:
-    #     duration = int(random.rayleigh(mode_value, 1)[0])
 
-    # job preferred start time
-    p_start = int(np.random.choice(a=num_periods, size=1, p=p_d_short)[0] * num_intervals_periods
-                  + np.random.random_integers(-num_intervals_periods + 1, num_intervals_periods))
-    # p_start = num_intervals + 1
-    # while p_start + duration - 1 >= no_intervals - 1 or p_start < 0:
-    #     middle_point = int(np.random.choice(a=no_periods, size=1, p=p_d_short)[0]
-    #                        * no_intervals_periods
-    #                        + np.random.random_integers(-2, 2 + 1))
-    #     p_start = middle_point - int(duration / 2)
+    # generation - preferred start time
+    p_start = int(np.random.choice(a=num_periods, size=1, p=p_d_short)[0]) * num_intervals_periods \
+        + r.randint(-num_intervals_periods + 1, num_intervals_periods)
+    p_start = min(p_start, num_intervals - 1)
 
-    # job care factor
+    # generation - earliest starting time
+    # e_start = r.randint(-duration + 1, p_start)
+    e_start = 0
+
+    # generation - latest finish time
+    l_finish = r.randint(p_start + duration, num_intervals - 1 + duration)
+
+    # generation - care factor
     care_f = int(r.choice([i for i in range(care_f_max + 1)]))
 
     return demand, duration, p_start, e_start, l_finish, care_f
@@ -142,26 +134,21 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
         care_factors.append(care_f)
 
         # decide if this task has a predecessing task
-        flag = bool(counter_j >= num_tasks - 3 and len(predecessors) == 0)
+        flag = bool(counter_j > num_tasks - 3 and predecessors == [])
         if r.choice([True, flag]) and counter_j > 0:
-
             # task predecessor
             id_predecessor_set = [i for i in range(counter_j)]
             id_predecessor = r.choice(id_predecessor_set)
 
-            while preferred_starts[id_predecessor] + durations[id_predecessor] - 1 >= p_start \
-                    and earliest_starts[id_predecessor] + durations[id_predecessor] + duration - 1 >= num_intervals:
+            while not preferred_starts[id_predecessor] + durations[id_predecessor] - 1 < p_start \
+                    and not earliest_starts[id_predecessor] + durations[id_predecessor] + duration - 1 \
+                    < num_intervals - 1 + duration:
                 try:
                     id_predecessor_set.remove(id_predecessor)
                     id_predecessor = r.choice(id_predecessor_set)
                 except IndexError or ValueError:
                     id_predecessor = -1
-
-            # while preferred_starts[id_predecessor] + durations[id_predecessor] - 1 >= preferred_starts[counter_j] \
-            #         and len(id_predecessor_set) > 0:
-            #     id_predecessor_set.remove(id_predecessor)
-            #     if len(id_predecessor_set) > 0:
-            #         id_predecessor = r.choice(id_predecessor_set)
+                    break
 
             if id_predecessor > -1:
                 predecessors.append(int(id_predecessor))
@@ -235,17 +222,27 @@ def area_generation(num_intervals, num_periods, num_intervals_periods):
     return households, area
 
 
-def data_preprocessing(prices_input, earliest_starts, latest_ends, durations, preferred_starts, care_factors, demands,
-                       care_f_weight):
+def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,
+                       preferred_starts, care_factors, demands, cf_weight):
+    max_demand = max(demands)
+    max_duration = max(durations)
+    max_price = max(prices_day)
     run_costs = []
-    for i in range(no_tasks):
+    for i in range(num_tasks):
+        demand = demands[i]
+        pstart = preferred_starts[i]
+        estart = earliest_starts[i]
+        lfinish = latest_ends[i]
+        duration = durations[i]
+        cfactor = care_factors[i]
+
         run_cost_task = []
-        for t in range(no_intervals):
-            if earliest_starts[i] <= t <= latest_ends[i] - durations[i] + 1:
-                rc = abs(t - preferred_starts[i]) * care_factors[i] * care_f_weight \
-                     + sum([prices_input[t2] for t2 in range(t, t + durations[i])]) * demands[i]
+        for t in range(num_intervals):
+            if estart <= t <= lfinish - duration + 1:
+                rc = abs(t - pstart) * cfactor * cf_weight
+                rc += sum([prices_day[j % num_intervals] for j in range(t, t + duration)]) * demand
             else:
-                rc = (no_intervals * care_f_max * care_f_weight + max(prices_input) * max(demands) * max(durations))
+                rc = (num_intervals * care_f_max * cf_weight + max_price * max_demand * max_duration)
             run_cost_task.append(int(rc))
         run_costs.append(run_cost_task)
     return run_costs
@@ -259,25 +256,35 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
     household_profile = [0] * num_intervals
     obj = 0
     for i in range(num_tasks):
-        task_demand = demands[i]
-        task_duration = durations[i]
+        demand = demands[i]
+        duration = durations[i]
         max_cost = max(run_costs[i])
-        feasible_indices = [t for t, x in enumerate(run_costs[i]) if x < max_cost]
+        estart = earliest_starts[i]
+        feasible_indices = [t for t, c in enumerate(run_costs[i]) if c < max_cost]
+        print(feasible_indices)
 
+        # if i has a predecessor
         if i in successors:
             pos_in_successors = successors.index(i)
             pre_id = predecessors[pos_in_successors]
             pre_delay = prec_delays[pos_in_successors]
-            this_astart = actual_starts[pre_id] + durations[pre_id]
-            feasible_indices = [f for f in feasible_indices if this_astart <= f <= this_astart + pre_delay]
+            pre_astart = actual_starts[pre_id]
+            pre_duration = durations[pre_id]
+            feasible_indices = [f for f in feasible_indices
+                                if pre_astart + pre_duration <= f <= pre_astart + pre_duration + pre_delay]
+        print(feasible_indices)
 
+        # if i has successors
         if i in predecessors:
             indices_in_precs = [i for i, k in enumerate(predecessors) if k == i]
+            # suc_delay = prec_delays[i]
             for iip in indices_in_precs:
                 suc_id = successors[iip]
                 suc_duration = durations[suc_id]
                 suc_lend = latest_ends[suc_id]
-                feasible_indices = [f for f in feasible_indices if f + task_duration + suc_duration - 1 <= suc_lend]
+                feasible_indices = [f for f in feasible_indices
+                                    if f + duration + suc_duration - 1 <= suc_lend]
+        print(feasible_indices)
 
         # if not this_successors == []:
         #     last_suc_lend = latest_ends[max(this_successors)]
@@ -298,7 +305,7 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         #         if not (this_estart <= j <= this_estart + last_prec_delay):
         #             feasible_indices.remove(j)
 
-        if feasible_indices is []:
+        if feasible_indices == []:
             print("error")
 
         feasible_min_cost = min([run_costs[i][f] for f in feasible_indices])
@@ -309,8 +316,8 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         max_demand_starts = dict()
         temp_profile = household_profile[:]
         try:
-            for d in range(a_start, a_start + task_duration):
-                temp_profile[d % num_intervals] += task_demand
+            for d in range(a_start, a_start + duration):
+                temp_profile[d % num_intervals] += demand
         except IndexError:
             print("error")
         temp_max_demand = max(temp_profile)
@@ -324,16 +331,16 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
             a_start = r.choice(feasible_min_cost_indices)
 
             temp_profile = household_profile[:]
-            for d in range(a_start, a_start + task_duration):
-                temp_profile[d] += task_demand
+            for d in range(a_start, a_start + duration):
+                temp_profile[d] += demand
             temp_max_demand = max(temp_profile)
 
         if len(feasible_indices) == 0 and not max_demand_starts:
             a_start = min(max_demand_starts, key=max_demand_starts.get)
 
         actual_starts.append(a_start)
-        for d in range(a_start, a_start + task_duration):
-            household_profile[d % num_intervals] += task_demand
+        for d in range(a_start, a_start + duration):
+            household_profile[d % num_intervals] += demand
         obj += run_costs[i][a_start]
 
     elapsed = timeit.default_timer() - start_time
@@ -411,8 +418,8 @@ def household_scheduling_subproblem \
     prec_delays = household["prec_delays"]
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
-    run_costs = data_preprocessing(prices_day, earliest_starts, latest_ends, durations, preferred_starts,
-                                   care_factors, demands, care_f_weight)
+    run_costs = data_preprocessing(no_intervals, no_tasks, prices_day, earliest_starts, latest_ends, durations,
+                                   preferred_starts, care_factors, demands, care_f_weight)
 
     # heuristics
     optimistic_starts, optimistic_profile, obj_ogsa, optimistic_runtime \
