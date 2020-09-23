@@ -22,12 +22,12 @@ no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
 new_households = True
-new_households = False
+# new_households = False
 no_households = 1000
-no_tasks = 10
+no_tasks = 5
 max_demand_multiplier = no_tasks
 care_f_max = 10
-care_f_weight = 800
+care_f_weight = 100
 
 # demand profile related parameters
 dp_profile = "profile"
@@ -41,8 +41,8 @@ pricing_table_weight = 1.0
 cost_type = "linear"  # or "piece-wise linear"
 
 # solver related parameters
-var_choices = ""
-const_choices = ""
+var_selection = "smallest"
+val_choice = "indomain_min"
 model_type = "pre"
 solver_type = "cp"
 
@@ -86,8 +86,8 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
     duration = max(1, int(random.rayleigh(mode_value, 1)[0]))
 
     # generation - preferred start time
-    p_start = int(np.random.choice(a=num_periods, size=1, p=p_d_short)[0]) * num_intervals_periods \
-              + r.randint(-num_intervals_periods + 1, num_intervals_periods)
+    p_start = max(int(np.random.choice(a=num_periods, size=1, p=p_d_short)[0]) * num_intervals_periods
+                  + r.randint(-num_intervals_periods + 1, num_intervals_periods), 0)
     p_start = min(p_start, num_intervals - 1)
 
     # generation - earliest starting time
@@ -276,8 +276,8 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
                        preferred_starts, care_factors, demands, cf_weight):
     max_demand = max(demands)
     max_duration = max(durations)
-    max_price = max(prices_day)
     run_costs = []
+    big_cost = (num_intervals * care_f_max * max_demand + max_demand * max_duration)
     for i in range(num_tasks):
         demand = demands[i]
         pstart = preferred_starts[i]
@@ -292,7 +292,7 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
                 rc = abs(t - pstart) * cfactor * cf_weight
                 rc += sum([prices_day[j % num_intervals] for j in range(t, t + duration)]) * demand
             else:
-                rc = (num_intervals * care_f_max * cf_weight + max_price * max_demand * max_duration)
+                rc = big_cost
             run_cost_task.append(int(rc))
         run_costs.append(run_cost_task)
     return run_costs
@@ -305,6 +305,8 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
     actual_starts = []
     household_profile = [0] * num_intervals
     obj = 0
+    max_duration = max(durations)
+    big_cost = (num_intervals * care_f_max * max_demand + max_demand * max_duration)
 
     def retrieve_successors_or_precedents(list0, prec_or_succ_list1, succ_prec_list2):
         list_r = []
@@ -331,9 +333,6 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         demand = demands[task_id]
         duration = durations[task_id]
         task_costs = run_costs[task_id]
-        max_cost = max(task_costs)
-
-        print(task_id)
 
         # if i has successors
         tasks_successors = check_if_successors_or_precedents_exist(task_id, predecessors, successors)
@@ -341,8 +340,10 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         if bool(tasks_successors):
             suc_durations = [durations[i2] for i2 in tasks_successors]
             suc_lends = [latest_ends[i2] for i2 in tasks_successors]
-            suc_lstarts = [lend - dur + 1 for lend, dur in zip(suc_lends, suc_durations)]
-            earliest_suc_lstart = min(suc_lstarts)
+            total_suc_duration = sum(suc_durations)
+            earliest_suc_lstart = min(suc_lends) - total_suc_duration + 1
+            # suc_lstarts = [lend - dur + 1 for lend, dur in zip(suc_lends, suc_durations)]
+            # earliest_suc_lstart = min(suc_lstarts)
 
         # if i has precedents
         tasks_precedents = check_if_successors_or_precedents_exist(task_id, successors, predecessors)
@@ -358,9 +359,12 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         # search for all feasible intervals
         feasible_intervals = []
         for j in range(num_intervals):
-            if task_costs[j] < max_cost and task_id + duration - 1 < earliest_suc_lstart \
-                    and latest_pre_finish < j and latest_pre_finish_w_delay > task_id:
+            if task_costs[j] < big_cost and j + duration - 1 < earliest_suc_lstart \
+                    and latest_pre_finish < j < latest_pre_finish_w_delay:
                 feasible_intervals.append(j)
+
+        if not bool(feasible_intervals):
+            print("error")
 
         feasible_min_cost = min([task_costs[f] for f in feasible_intervals])
         cheapest_intervals = [f for f in feasible_intervals if task_costs[f] == feasible_min_cost]
@@ -409,6 +413,11 @@ def household_optimal_solving \
     # problem model
     model = Model(model_file)
     gecode = Solver.lookup(solver_choice)
+    model.add_string("solve ")
+    if "gecode" in solver_choice:
+        model.add_string(":: {} ".format(search))
+    model.add_string("minimize obj;")
+
     ins = Instance(gecode, model)
     ins["num_intervals"] = num_intervals
     ins["num_tasks"] = num_tasks
@@ -429,15 +438,11 @@ def household_optimal_solving \
     else:
         ins["run_costs"] = run_costs
 
-    model.add_string("solve ")
-    if solver_choice == "Gecode":
-        model.add_string(":: {} ".format(search))
-    model.add_string("minimize obj;")
-
     # solve problem model
     result = ins.solve()
 
     # process problem solution
+    obj = result.objective
     solution = result.solution.actual_starts
     if "cp" in solver_type:
         actual_starts = [int(a) - 1 for a in solution]
@@ -448,9 +453,9 @@ def household_optimal_solving \
     optimal_demand_profile = [0] * num_intervals
     for demand, duration, a_start, i in zip(demands, durations, actual_starts, range(num_tasks)):
         for t in range(a_start, a_start + duration):
-            optimal_demand_profile[t] += demand
+            optimal_demand_profile[t % num_intervals] += demand
 
-    return optimal_demand_profile, actual_starts, time
+    return optimal_demand_profile, actual_starts, obj, time
 
 
 def household_scheduling_subproblem \
@@ -480,20 +485,21 @@ def household_scheduling_subproblem \
                                    preferred_starts, care_factors, demands, care_f_weight)
 
     # heuristic algorithm -- optimistic greedy search algorithm (OGSA)
-    optimistic_starts, optimistic_profile, obj_ogsa, optimistic_runtime \
+    optimistic_starts, optimistic_profile, optimistic_obj, optimistic_runtime \
         = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors,
                                       succ_delays, max_demand, run_costs[:], household["precs"], latest_ends)
 
     # optimisation solver -- constraint programming (CP)
     succ_delays = [x[0] for x in list(household["succ_delays"].values())]
-    search = "int_search(actual_starts, {}, {}, complete)".format(var_choices, const_choices)
-    optimal_profile, optimal_starts, optimal_runtime \
+    search = "int_search(actual_starts, {}, {}, complete)".format(var_selection, val_choice)
+    optimal_profile, optimal_starts, optimal_obj, optimal_runtime \
         = household_optimal_solving(num_intervals, num_tasks, prices_day, preferred_starts, earliest_starts,
                                     latest_ends, durations, demands, care_factors, no_precedences, precedents,
                                     successors, succ_delays, max_demand, model_file, solver_choice, m_type, s_type,
                                     run_costs[:], search, care_f_weight)
 
-    return optimistic_starts, optimistic_profile, optimistic_runtime, optimal_starts, optimal_profile, optimal_runtime
+    return optimistic_starts, optimistic_profile, optimistic_obj, optimistic_runtime, \
+        optimal_starts, optimal_profile, optimal_obj, optimal_runtime
 
 
 def pricing_cost(demand_profile, price_levels, demand_table, cost_function_type):
@@ -531,11 +537,9 @@ def pricing_master_problem(price_levels, demand_table, demand_profile_pre, deman
         for dp, dn, d_levels in zip(demand_profile_pre, demand_profile_new, demand_table):
             step = 1
             dd = dn - dp
-
             if dd != 0:
                 dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
                 step = (dl - dp) / dd
-
             step_profile.append(step)
 
         best_step_size = min(step_profile)
@@ -552,7 +556,6 @@ def iteration():
     print("{0} households, {1} tasks per household".format(no_households, no_tasks))
     print("---------- Experiments begin! ----------")
 
-    # data generation and initialisation (iteration = 0)
     # 0 - generation household data and the total preferred demand profile
     if new_households:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder)
@@ -581,34 +584,36 @@ def iteration():
     prices_history = [price_day]
     print("---------- Initialisation done! ----------")
 
-    # rescheduling and pricing (iteration = k where k > 0)
+    # 1 - rescheduling and pricing (iteration = k where k > 0)
     k = 1
     total_runtime_heuristic = 0
     total_runtime_optimal = 0
     while True:
 
-        # reschedule given the prices at iteration k - 1
+        # 1 - reschedule given the prices at iteration k - 1
         prices_pre = prices_history[k - 1]
         area_demand_profile_heuristic = [0] * no_intervals
         area_demand_profile_optimal = [0] * no_intervals
         for key, household in households.items():
-            heuristic_starts, heuristic_profile, heuristic_runtime, optimal_starts, optimal_profile, optimal_runtime \
+            heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime, \
+                optimal_starts, optimal_profile, optimal_obj, optimal_runtime \
                 = household_scheduling_subproblem(no_intervals, no_tasks, no_periods, no_intervals_periods, household,
                                                   prices_pre, model_file,
                                                   model_type, solver_type, solver_choice)
 
-            area_demand_profile_heuristic = [x + y for x, y in zip(heuristic_starts, area_demand_profile_heuristic)]
+            area_demand_profile_heuristic = [x + y for x, y in zip(heuristic_profile, area_demand_profile_heuristic)]
             area_demand_profile_optimal = [x + y for x, y in zip(optimal_profile, area_demand_profile_optimal)]
             total_runtime_heuristic += heuristic_runtime
             total_runtime_optimal += optimal_runtime
-            print("household " + str(key))
+            print("household {}".format(key))
 
-        # aggregate demand profile
+        # 1 - aggregate demand profile
         area[dp_profile][dp_heuristic][k] = [sum(x) for x in
                                              grouper(area_demand_profile_heuristic, no_intervals_periods)]
         area[dp_profile][dp_optimal][k] = [sum(x) for x in grouper(area_demand_profile_optimal, no_intervals_periods)]
 
-        # pricing
+        # 1 - pricing
+        
 
 
 iteration()
