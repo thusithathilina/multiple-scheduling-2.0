@@ -138,7 +138,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
     # precedence among tasks
     precedors = dict()
     no_precedences = 0
-    prec_delays = []
+    prec_delays = dict()
 
     def retrieve_precedors(list0):
         list3 = []
@@ -146,33 +146,41 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             if l in precedors:
                 list2 = precedors[l]
                 retrieved_list = retrieve_precedors(list2)
+                # todo - add the one with the latest finish? earliest start time?
                 list3.extend(retrieved_list)
             else:
                 list3.append(l)
         return list3
+
+    def add_precedes(t, prev, delay):
+        if t not in precedors:
+            precedors[t] = [prev]
+            prec_delays[t] = [delay]
+        else:
+            precedors[t].append(prev)
+            prec_delays[t].append(delay)
 
     for t in range(1, num_tasks):
         # if r.choice([True, False]):
         if True:
             previous_tasks = list(range(t))
             # previous_tasks.reverse()
-            # r.shuffle(previous_tasks)
+            r.shuffle(previous_tasks)
             for prev in previous_tasks:
                 if preferred_starts[prev] + durations[prev] - 1 < preferred_starts[t] \
                         and earliest_starts[prev] + durations[prev] < latest_ends[t] - durations[t] + 1:
 
                     if prev not in precedors:
-                        if t not in precedors:
-                            precedors[t] = [prev]
-                        else:
-                            precedors[t].append(prev)
+                        # feasible delay
+                        succeding_delay = num_intervals - 1
+                        add_precedes(t, prev, succeding_delay)
                         no_precedences += 1
-                        # break
+
+                        break
                     else:
                         # find all precedors of this previous task
                         precs_prev = retrieve_precedors([prev])
                         precs_prev.append(prev)
-                        # precs_precs_prev.reverse()
 
                         precs_prev_duration = sum([durations[x] for x in precs_prev])
                         latest_pstart = preferred_starts[precs_prev[0]]
@@ -180,12 +188,10 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
                         if latest_pstart + precs_prev_duration - 1 < preferred_starts[t] \
                                 and latest_estart + precs_prev_duration < latest_ends[t] - durations[t] + 1:
-                            if t not in precedors:
-                                precedors[t] = [prev]
-                            else:
-                                precedors[t].append(prev)
+                            succeding_delay = num_intervals - 1
+                            add_precedes(t, prev, succeding_delay)
                             no_precedences += 1
-                            # break
+                            break
 
     # print(" --- Household made ---")
 
@@ -214,7 +220,6 @@ def area_generation(num_intervals, num_periods, num_intervals_periods):
         households[household_key]["psts"] = preferred_starts
         households[household_key]["cfs"] = [cf * care_f_weight for cf in care_factors]
         households[household_key]["precs"] = precedors
-        # households[household_key]["succs"] = successors
         households[household_key]["prec_delays"] = prec_delays
         households[household_key]["no_prec"] = num_precedences
 
@@ -267,12 +272,25 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
 
 
 def household_heuristic_solving(num_intervals, num_tasks, durations, demands, predecessors, successors,
-                                prec_delays, max_demand, run_costs, earliest_starts, latest_ends):
+                                prec_delays, max_demand, run_costs, precedents, latest_ends):
     start_time = timeit.default_timer()
 
     actual_starts = []
     household_profile = [0] * num_intervals
     obj = 0
+
+    def retrieve_successors(list0):
+        list_r = []
+        for l in list0:
+            if l in predecessors:
+                succ_indices = [i2 for i2, k in enumerate(predecessors) if k == i]
+                succ = [successors[i2] for i2 in succ_indices]
+                succ_succ = retrieve_successors(succ)
+                list_r.extend(succ_succ)
+            else:
+                list_r.append(l)
+        return list_r
+
     for i in range(num_tasks):
         demand = demands[i]
         duration = durations[i]
@@ -282,8 +300,10 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         # if i has successors
         earliest_suc_lstart = num_intervals - 1
         if i in predecessors:
-            indices = [i2 for i2, k in enumerate(predecessors) if k == i]
-            task_successors = [successors[i2] for i2 in indices]
+            task_successors_indices = [i2 for i2, k in enumerate(predecessors) if k == i]
+            task_successors = [successors[i2] for i2 in task_successors_indices]
+            # find the sucessors of successors
+            task_successors_successors = retrieve_successors(task_successors)
             suc_durations = [durations[i2] for i2 in task_successors]
             suc_lends = [latest_ends[i2] for i2 in task_successors]
             suc_lstarts = [lend - dur + 1 for lend, dur in zip(suc_lends, suc_durations)]
@@ -398,42 +418,44 @@ def household_optimal_solving \
 
 def household_scheduling_subproblem \
                 (num_intervals, num_tasks, num_periods, num_intervals_periods, household, prices_day, model_file,
-                 model_type, solver_type, solver_choice):
+                 m_type, s_type, solver_choice):
+    # pricing data
     if np.isnan(prices_day[-1]) or len(prices_day) == num_periods:
         prices_day = [int(p) for p in prices_day[:num_periods] for _ in range(num_intervals_periods)]
     else:
         prices_day = [int(p) for p in prices_day]
 
+    # household data
     demands = household["demands"]
     durations = household["durs"]
     earliest_starts = household["ests"]
     latest_ends = household["lfts"]
     preferred_starts = household["psts"]
     care_factors = household["cfs"]
-    precedents = list(household["precs"].values())
+    precedents = [x[0] for x in list(household["precs"].values())]
     successors = list(household["precs"].keys())
-    prec_delays = household["prec_delays"]
+    prec_delays = [x[0] for x in list(household["prec_delays"].values())]
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
+
+    # data preprocessing
     run_costs = data_preprocessing(no_intervals, no_tasks, prices_day, earliest_starts, latest_ends, durations,
                                    preferred_starts, care_factors, demands, care_f_weight)
 
-    # heuristics
+    # heuristic algorithm -- optimistic greedy search algorithm (OGSA)
     optimistic_starts, optimistic_profile, obj_ogsa, optimistic_runtime \
         = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors,
-                                      prec_delays, max_demand, run_costs[:], earliest_starts, latest_ends)
+                                      prec_delays, max_demand, run_costs[:], household["precs"], latest_ends)
 
-    # optimisation solver
+    # optimisation solver -- constraint programming (CP)
     search = "int_search(actual_starts, {}, {}, complete)".format(var_choices, const_choices)
     optimal_profile, optimal_starts, optimal_runtime \
-        = household_optimal_solving(num_intervals, num_tasks, prices_day, preferred_starts,
-                                    earliest_starts, latest_ends, durations,
-                                    demands, care_factors, no_precedences, predecessors,
-                                    successors, prec_delays, max_demand,
-                                    model_file, solver_choice, model_type, solver_type,
+        = household_optimal_solving(num_intervals, num_tasks, prices_day, preferred_starts, earliest_starts,
+                                    latest_ends, durations, demands, care_factors, no_precedences, precedents,
+                                    successors, prec_delays, max_demand, model_file, solver_choice, m_type, s_type,
                                     run_costs[:], search, care_f_weight)
 
-    return optimistic_starts, optimistic_profile, optimistic_runtime, optimal_starts, optimal_profile,optimal_runtime
+    return optimistic_starts, optimistic_profile, optimistic_runtime, optimal_starts, optimal_profile, optimal_runtime
 
 
 def pricing_cost(demand_profile, price_levels, demand_table, cost_function_type):
