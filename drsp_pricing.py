@@ -6,7 +6,9 @@ from multiple.fixed_parameter import *
 def pricing_cost(demand_profile, price_levels, demand_table, cost_function_type):
     price_day = []
     cost = 0
-    for d, demand_level in zip(demand_profile, demand_table):
+
+    L_DEMAND_PROFILE_TABLE = lambda: zip(demand_profile, demand_table)
+    for d, demand_level in L_DEMAND_PROFILE_TABLE():
         level = bisect_left(demand_level, d)
         if level != len(demand_level):
             price = price_levels[level]
@@ -35,7 +37,8 @@ def pricing_step_size(price_levels, demand_table, demand_profile_pre, demand_pro
     # apply the FW algorithm
     else:
         step_profile = []
-        for dp, dn, d_levels in zip(demand_profile_pre, demand_profile_new, demand_table):
+        L_DEMAND_PROFILE_PRE_NEW_TABLE = lambda: zip(demand_profile_pre, demand_profile_new, demand_table)
+        for dp, dn, d_levels in L_DEMAND_PROFILE_PRE_NEW_TABLE():
             step = 1
             dd = dn - dp
             if dd != 0:

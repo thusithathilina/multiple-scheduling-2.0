@@ -18,19 +18,25 @@ def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit, pricing_table_w
     solvers = dict()
     solvers["cp"] = "gecode"
 
-    demand_levels = []
-    price_levels = []
     demand_level_scale = demand_limit * pricing_table_weight
+    pricing_table = dict()
+    pricing_table[k0_price_levels] = []
+    pricing_table[k0_demand_table] = dict()
     with open(f_pricing_table, 'r') as csvfile:
         csvreader = reader(csvfile, delimiter=',', quotechar='|')
 
-        for row in csvreader:
+        for i_row, row in enumerate(csvreader):
+            # a row - the price and the demands of all periods at one level.
             pricing_table_row = list(map(float, row))
-            price_levels.append(pricing_table_row[0])
-            demand_levels.append([round(x * demand_level_scale, -3) for x in pricing_table_row[1:]])
-    demand_table = zip(*demand_levels)
+            price = pricing_table_row[0]
+            pricing_table[k0_price_levels].append(price)
+            # a col - the demand at one level of a period
+            for i_col, col in enumerate(pricing_table_row[1:]):
+                if i_col not in pricing_table[k0_demand_table]:
+                    pricing_table[k0_demand_table][i_col] = dict()
+                pricing_table[k0_demand_table][i_col][i_row] = round(col * demand_level_scale, -3)
 
-    return models, solvers, price_levels, demand_table
+    return models, solvers, pricing_table
 
 
 def task_generation(num_intervals, num_periods, num_intervals_periods, mode_value, l_demands, p_d_short, cf_max):

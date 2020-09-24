@@ -17,4 +17,6 @@ k0_obj = "obj"
 
 # pricing related parameters
 k0_price_history = "price_history"
+k0_price_levels = "price_levels"
+k0_demand_table = "demand_levels"
 
