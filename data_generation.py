@@ -128,8 +128,8 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             succ_delays[task].append(delay)
 
     for t in range(1, num_tasks):
-        # if r.choice([True, False]):
-        if True:
+        if r.choice([True, False]):
+        # if True:
             previous_tasks = list(range(t))
             # previous_tasks.reverse()
             r.shuffle(previous_tasks)

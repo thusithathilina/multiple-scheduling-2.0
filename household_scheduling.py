@@ -122,7 +122,8 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
 
             feasible_min_cost = min([run_costs[task_id][f] for f in feasible_intervals])
             feasible_min_cost_indices = [k for k, x in enumerate(run_costs[task_id]) if x == feasible_min_cost]
-            a_start = r.choice(feasible_min_cost_indices)
+            # a_start = r.choice(feasible_min_cost_indices)
+            a_start = feasible_min_cost_indices[0]
 
             temp_profile = household_profile[:]
             for d in range(a_start, a_start + duration):

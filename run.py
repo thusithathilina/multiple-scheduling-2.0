@@ -13,9 +13,9 @@ no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
 new_households = True
-new_households = False
-no_households = 10
-no_tasks = 3
+# new_households = False
+no_households = 1000
+no_tasks = 5
 max_demand_multiplier = no_tasks
 care_f_max = 10
 care_f_weight = 100
@@ -50,7 +50,7 @@ def iteration():
 
     # 0 - initialise experiment (iteration = 0)
     itr = 0
-    print("---------- Summary ----------")
+    print("---------- Experiment Summary ----------")
     print("{0} households, {1} tasks per household".format(no_households, no_tasks))
     print("---------- Experiments begin! ----------")
 
@@ -88,7 +88,7 @@ def iteration():
     itr = 1
     total_runtime_heuristic = 0
     total_runtime_optimal = 0
-    while True:
+    while optimal_step_size > 0.01:
 
         # 1 - reschedule given the prices at iteration k - 1
         heuristic_area_demand_profile = [0] * no_intervals
@@ -113,19 +113,26 @@ def iteration():
         area[k0_profile][k1_optimal][itr] \
             = [sum(x) for x in grouper(optimal_area_demand_profile, no_intervals_periods)]
 
-        # 1 - pricing
+        # 2 - pricing
         heuristic_demand_profile_updated, heuristic_step_size, heuristic_prices, heuristic_cost, \
             optimal_demand_profile_updated, optimal_step_size, optimal_prices, optimal_cost \
             = pricing_master_problem(itr, pricing_table, area, cost_type)
+        print("step size at iteration {}: optimal = {}, heuristic = {}"
+              .format(itr, float(optimal_step_size), float(heuristic_step_size)))
 
-        # 1 - update the demand profiles, prices and the step size
+        # 2 - update the demand profiles, prices and the step size
         update_area_trackers(itr, k1_optimal, optimal_cost, optimal_cost, 0, optimal_step_size, optimal_prices)
         update_area_trackers(itr, k1_heuristic, heuristic_cost, heuristic_cost, 0, heuristic_step_size,
                              heuristic_prices)
-        print("step size: optimal = {}, heuristic = {}".format(optimal_step_size, heuristic_step_size))
 
-        # 1 - move on to the next iteration
+        # 3 - move on to the next iteration
         itr += 1
+
+    print("---------- Result Summary ----------")
+    print("Converged in {0} iteration".format(itr))
+    print("---------- Iteration done! ----------")
+
+    # 4 - write results to files
 
 
 iteration()

@@ -41,8 +41,9 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, cos
     else:
         change_of_gradient = 999
         price_day = prices_pre
-        step_profile = []
+        demand_profile_changed = [d_n - d_p for d_n, d_p in zip(demand_profile_new, demand_profile_pre)]
         while change_of_gradient > 1 and best_step_size < 1:
+            step_profile = []
             for dp, dn, d_levels_period in \
                     zip(demand_profile_pre, demand_profile_new, pricing_table[k0_demand_table].values()):
                 d_levels = list(d_levels_period.values())
@@ -54,15 +55,15 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, cos
                         step = (dl - dp) / dd
                         step = min(1, step)
                     except ValueError:
-                        pass  # keep step = 1
+                        pass
                 step_profile.append(step)
 
             best_step_size = min(step_profile)
-            demand_profile_updated = [dp + (dn - dp) * best_step_size for dp, dn in
-                                      zip(demand_profile_pre, demand_profile_new)]
+            demand_profile_updated = [d_p + d_c * best_step_size for d_p, d_c in
+                                      zip(demand_profile_pre, demand_profile_changed)]
             price_day, cost = pricing_cost(demand_profile_updated, pricing_table, cost_type)
-            change_of_gradient = sum([(d_n - d_p) * (p_n - p_p) for d_n, d_p, p_n, p_p in
-                                      zip(demand_profile_new, demand_profile_pre, price_day, prices_pre)])
+            change_of_gradient = sum([d_c * (p_n - p_p) for d_c, p_n, p_p in
+                                      zip(demand_profile_changed, price_day, prices_pre)])
             prices_pre = price_day
 
     return demand_profile_updated, best_step_size, price_day, cost
@@ -89,7 +90,7 @@ def pricing_master_problem(iteration, pricing_table, area, cost_type):
 
     optimal_demand_profile_updated, optimal_best_step_size, optimal_price_day, optimal_cost \
         = pricing_step_size(pricing_table, optimal_demand_profile_pre, optimal_demand_profile_new,
-                            cost_type, heuristic_prices_pre)
+                            cost_type, optimal_prices_pre)
 
     return heuristic_demand_profile_updated, heuristic_best_step_size, heuristic_price_day, heuristic_cost, \
         optimal_demand_profile_updated, optimal_best_step_size, optimal_price_day, optimal_cost
