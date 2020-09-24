@@ -23,6 +23,7 @@ care_f_weight = 100
 # pricing related parameters
 pricing_table_weight = 1.0
 cost_type = "linear"  # or "piece-wise linear"
+cost_type = "piece-wise"
 zero_digit = 2
 
 # solver related parameters

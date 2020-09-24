@@ -26,7 +26,7 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
                 try:
                     rc += sum([prices_day[j % num_intervals] for j in range(t, t + duration)]) * demand
                 except IndexError:
-                    print("error")
+                    print("Error: check the prices.")
             else:
                 rc = big_cost
             run_cost_task.append(int(rc))
