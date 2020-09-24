@@ -1,31 +1,24 @@
 from more_itertools import grouper
-from bisect import bisect_left
-from multiple.cfunctions import find_ge, find_le
-from multiple.household_scheduling import *
 from multiple.data_generation import *
+from multiple.household_scheduling import *
+from multiple.drsp_pricing import *
+from multiple.fixed_parameter import *
 from time import strftime, localtime
 import timeit
 
 # time related parameters
-no_intervals = 144
+no_intervals = 48
 no_periods = 48
 no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
 new_households = True
-# new_households = False
-no_households = 1000
+new_households = False
+no_households = 100
 no_tasks = 5
 max_demand_multiplier = no_tasks
 care_f_max = 10
 care_f_weight = 100
-
-# demand profile related parameters
-dp_profile = "profile"
-dp_interval = "interval"
-dp_period = "period"
-dp_optimal = "optimal"
-dp_heuristic = "heuristic"
 
 # pricing related parameters
 pricing_table_weight = 1.0
@@ -44,56 +37,9 @@ file_pricing_table = 'inputs/pricing_table_0.csv'
 file_household_area_folder = 'data/'
 
 
-def pricing_cost(demand_profile, price_levels, demand_table, cost_function_type):
-    price_day = []
-    cost = 0
-    for d, demand_level in zip(demand_profile, demand_table):
-        level = bisect_left(demand_level, d)
-        if level != len(demand_level):
-            price = price_levels[level]
-        else:
-            price = price_levels[-1]
-        price_day.append(price)
-
-        if "piece-wise" in cost_function_type and level > 0:
-            cost += demand_level[0] * price_levels[0]
-            cost += (d - demand_level[level - 1]) * price
-            cost += sum([(demand_level[i] - demand_level[i - 1]) * price_levels[i] for i in range(1, level)])
-        else:
-            cost += d * price
-
-    return price_day, cost
-
-
-def pricing_master_problem(price_levels, demand_table, demand_profile_pre, demand_profile_new, cost_type):
-    best_step_size = 1
-    demand_profile_updated = demand_profile_new
-
-    # simply compute the total consumption cost and the price
-    if demand_profile_pre is None:
-        price_day, cost = pricing_cost(demand_profile_new, price_levels, demand_table, cost_type)
-
-    # apply the FW algorithm
-    else:
-        step_profile = []
-        for dp, dn, d_levels in zip(demand_profile_pre, demand_profile_new, demand_table):
-            step = 1
-            dd = dn - dp
-            if dd != 0:
-                dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
-                step = (dl - dp) / dd
-            step_profile.append(step)
-
-        best_step_size = min(step_profile)
-        demand_profile_updated = [dp + (dn - dp) * best_step_size for dp, dn in
-                                  zip(demand_profile_pre, demand_profile_new)]
-        price_day, cost = pricing_cost(demand_profile_updated, price_levels, demand_table, cost_type)
-
-    return demand_profile_updated, best_step_size, price_day, cost
-
-
 def iteration():
-    # print experiment summary
+    # 0 - initialise experiment (iteration = 0)
+    itr = 0
     print("---------- Summary ----------")
     print("{0} households, {1} tasks per household".format(no_households, no_tasks))
     print("---------- Experiments begin! ----------")
@@ -101,13 +47,12 @@ def iteration():
     # 0 - generation household data and the total preferred demand profile
     if new_households:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
-                                           no_households, no_tasks, care_f_weight, care_f_max, max_demand_multiplier,
-                                           dp_profile, dp_interval, dp_period, dp_optimal, dp_heuristic)
+                                           no_households, no_tasks, care_f_weight, care_f_max, max_demand_multiplier)
         print("Household data created...")
     else:
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
-    area_demand_profile = area[dp_profile][dp_period][0]
+    area_demand_profile = area[k0_profile][k1_period][0]
     area_demand_max = max(area_demand_profile)
 
     # 0 - read the model file, solver choice and the pricing table (price levels and the demand table)
@@ -118,24 +63,33 @@ def iteration():
     print("Model, solver and pricing data created...")
 
     # 0 - the prices of the total preferred demand profile
-    demand_profile_unchanged, step_size, price_day, cost \
-        = pricing_master_problem(price_levels, demand_table, None, area_demand_profile, cost_type)
+    heuristic_demand_profile_updated, heuristic_best_step_size, heuristic_price_day, heuristic_cost, \
+        optimal_demand_profile_updated, optimal_best_step_size, optimal_price_day, optimal_cost \
+        = pricing_master_problem(itr, price_levels, demand_table, area, cost_type)
     print("First day prices calculated...")
 
-    # 0 - initialise trackers
-    step_size_history = [step_size]
-    cost_history = [cost]
-    prices_history = [price_day]
+    # 0 - initialise tracker values
+    area[k0_obj][k1_optimal][0] = optimal_cost
+    area[k0_obj][k1_heuristic][0] = optimal_cost
+    area[k0_cost][k1_optimal][0] = optimal_cost
+    area[k0_cost][k1_heuristic][0] = optimal_cost
+    area[k0_inconvenient][k1_optimal][0] = 0
+    area[k0_inconvenient][k1_heuristic][0] = 0
+    area[k0_ss][k1_optimal][0] = optimal_best_step_size
+    area[k0_ss][k1_heuristic][0] = heuristic_best_step_size
+    area[k0_price_history][k1_optimal][0] = optimal_price_day
+    area[k0_price_history][k1_heuristic][0] = heuristic_price_day
+
     print("---------- Initialisation done! ----------")
 
     # 1 - rescheduling and pricing (iteration = k where k > 0)
-    k = 1
+    itr = 1
     total_runtime_heuristic = 0
     total_runtime_optimal = 0
     while True:
 
         # 1 - reschedule given the prices at iteration k - 1
-        prices_pre = prices_history[k - 1]
+        prices_pre = area[k0_price_history][k1_optimal][itr - 1]
         area_demand_profile_heuristic = [0] * no_intervals
         area_demand_profile_optimal = [0] * no_intervals
         for key, household in households.items():
@@ -153,11 +107,21 @@ def iteration():
             print("household {}".format(key))
 
         # 1 - aggregate demand profile
-        area[dp_profile][dp_heuristic][k] = [sum(x) for x in
-                                             grouper(area_demand_profile_heuristic, no_intervals_periods)]
-        area[dp_profile][dp_optimal][k] = [sum(x) for x in grouper(area_demand_profile_optimal, no_intervals_periods)]
+        area[k0_profile][k1_heuristic][itr] = [sum(x) for x in grouper(area_demand_profile_heuristic,
+                                                                       no_intervals_periods)]
+        area[k0_profile][k1_optimal][itr] = [sum(x) for x in grouper(area_demand_profile_optimal,
+                                                                     no_intervals_periods)]
 
         # 1 - pricing
+        heuristic_demand_profile_updated, heuristic_best_step_size, heuristic_price_day, heuristic_cost, \
+            optimal_demand_profile_updated, optimal_best_step_size, optimal_price_day, optimal_cost \
+            = pricing_master_problem(itr, price_levels, demand_table, area, cost_type)
+
+        # 1 - update the prices and the step size
+
+
+        # 1 - move on to the next iteration
+        itr += 1
 
 
 iteration()

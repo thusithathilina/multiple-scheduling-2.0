@@ -6,6 +6,7 @@ import numpy as np
 from numpy import sqrt, pi, random
 import os
 from more_itertools import grouper
+from multiple.fixed_parameter import *
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit, pricing_table_weight):
@@ -101,25 +102,25 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
     no_precedences = 0
     succ_delays = dict()
 
-    def retrieve_precedors(list0):
+    def retrieve_precedes(list0):
         list3 = []
         for l in list0:
             if l in precedors:
                 list2 = precedors[l]
-                retrieved_list = retrieve_precedors(list2)
+                retrieved_list = retrieve_precedes(list2)
                 # todo - add the one with the latest finish? earliest start time?
                 list3.extend(retrieved_list)
             else:
                 list3.append(l)
         return list3
 
-    def add_precedes(t, prev, delay):
-        if t not in precedors:
-            precedors[t] = [prev]
-            succ_delays[t] = [delay]
+    def add_precedes(task, previous, delay):
+        if task not in precedors:
+            precedors[task] = [previous]
+            succ_delays[task] = [delay]
         else:
-            precedors[t].append(prev)
-            succ_delays[t].append(delay)
+            precedors[task].append(previous)
+            succ_delays[task].append(delay)
 
     for t in range(1, num_tasks):
         # if r.choice([True, False]):
@@ -140,7 +141,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
                         break
                     else:
                         # find all precedors of this previous task
-                        precs_prev = retrieve_precedors([prev])
+                        precs_prev = retrieve_precedes([prev])
                         precs_prev.append(prev)
 
                         precs_prev_duration = sum([durations[x] for x in precs_prev])
@@ -161,8 +162,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
 
 def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks, cf_weight, cf_max, max_demand_multiplier,
-                    dp_profile, dp_interval, dp_period, dp_optimal, dp_heuristic):
+                    num_households, num_tasks, cf_weight, cf_max, max_demand_multiplier):
     probability = genfromtxt('inputs/probability.csv', delimiter=',', dtype="float")
 
     households = dict()
@@ -193,17 +193,36 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
-    # area demand profile
+    # initialise demand profile tracker
     area = dict()
-    area[dp_profile] = dict()
-    area[dp_profile][dp_interval] = dict()
-    area[dp_profile][dp_interval][0] = area_demand_profile
-    area[dp_profile][dp_period] = dict()
-    area[dp_profile][dp_period][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    area[dp_profile][dp_optimal] = dict()
-    area[dp_profile][dp_optimal][0] = area_demand_profile
-    area[dp_profile][dp_heuristic] = dict()
-    area[dp_profile][dp_heuristic][0] = area_demand_profile
+    area[k0_profile] = dict()
+    area[k0_profile][k1_interval] = dict()
+    area[k0_profile][k1_period] = dict()
+    area[k0_profile][k1_optimal] = dict()
+    area[k0_profile][k1_heuristic] = dict()
+
+    area[k0_profile][k1_interval][0] = area_demand_profile
+    area[k0_profile][k1_period][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+    area[k0_profile][k1_optimal][0] = area_demand_profile
+    area[k0_profile][k1_heuristic][0] = area_demand_profile
+
+    # initialise objective value tracker
+    area[k0_obj] = dict()
+    area[k0_cost] = dict()
+    area[k0_inconvenient] = dict()
+    area[k0_ss] = dict()
+    area[k0_price_history] = dict()
+
+    area[k0_obj][k1_optimal] = dict()
+    area[k0_obj][k1_heuristic] = dict()
+    area[k0_cost][k1_optimal] = dict()
+    area[k0_cost][k1_heuristic] = dict()
+    area[k0_inconvenient][k1_optimal] = dict()
+    area[k0_inconvenient][k1_heuristic] = dict()
+    area[k0_ss][k1_optimal] = dict()
+    area[k0_ss][k1_heuristic] = dict()
+    area[k0_price_history][k1_optimal] = dict()
+    area[k0_price_history][k1_heuristic] = dict()
 
     # write household data and area data into files\
     if not os.path.exists(data_folder):
