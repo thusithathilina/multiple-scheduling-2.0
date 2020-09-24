@@ -56,7 +56,7 @@ def iteration():
     area_demand_max = max(area_demand_profile)
 
     # 0 - read the model file, solver choice and the pricing table (price levels and the demand table)
-    models, solvers, price_levels, demand_table \
+    models, solvers, pricing_table \
         = read_data(file_cp_pre, file_cp_ini, file_pricing_table, area_demand_max, pricing_table_weight)
     solver_choice = solvers[solver_type]
     model_file = models[solver_type][model_type]
@@ -65,7 +65,7 @@ def iteration():
     # 0 - the prices of the total preferred demand profile
     heuristic_demand_profile_updated, heuristic_best_step_size, heuristic_price_day, heuristic_cost, \
         optimal_demand_profile_updated, optimal_best_step_size, optimal_price_day, optimal_cost \
-        = pricing_master_problem(itr, price_levels, demand_table, area, cost_type)
+        = pricing_master_problem(itr, pricing_table, area, cost_type)
     print("First day prices calculated...")
 
     # 0 - initialise tracker values
