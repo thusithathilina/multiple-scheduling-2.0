@@ -2,6 +2,7 @@ import numpy as np
 import timeit
 from minizinc import *
 import random as r
+from multiple.fixed_parameter import *
 
 
 def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,
@@ -22,7 +23,10 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
         for t in range(num_intervals):
             if estart <= t <= lfinish - duration + 1:
                 rc = abs(t - pstart) * cfactor * cf_weight
-                rc += sum([prices_day[j % num_intervals] for j in range(t, t + duration)]) * demand
+                try:
+                    rc += sum([prices_day[j % num_intervals] for j in range(t, t + duration)]) * demand
+                except IndexError:
+                    print("error")
             else:
                 rc = big_cost
             run_cost_task.append(int(rc))
@@ -192,13 +196,21 @@ def household_optimal_solving \
 
 def household_scheduling_subproblem \
                 (num_intervals, num_tasks, num_periods, num_intervals_periods,
-                 household, cf_weight, cf_max, prices_day,
+                 household, cf_weight, cf_max, area_prices, iteration,
                  model_file, m_type, s_type, solver_choice, var_selection, val_choice):
-    # pricing data
-    if np.isnan(prices_day[-1]) or len(prices_day) == num_periods:
-        prices_day = [int(p) for p in prices_day[:num_periods] for _ in range(num_intervals_periods)]
+    # heuristic prices
+    heuristic_prices = area_prices[k1_heuristic][iteration - 1]
+    if len(heuristic_prices) == num_periods:
+        heuristic_prices = [int(p) for p in heuristic_prices[:num_periods] for _ in range(num_intervals_periods)]
     else:
-        prices_day = [int(p) for p in prices_day]
+        heuristic_prices = [int(p) for p in heuristic_prices]
+
+    # optimal prices
+    optimal_prices = area_prices[k1_optimal][iteration - 1]
+    if len(optimal_prices) == num_periods:
+        optimal_prices = [int(p) for p in optimal_prices[:num_periods] for _ in range(num_intervals_periods)]
+    else:
+        optimal_prices = [int(p) for p in optimal_prices]
 
     # household data
     demands = household["demands"]
@@ -209,27 +221,30 @@ def household_scheduling_subproblem \
     care_factors = household["cfs"]
     precedents = [x[0] for x in list(household["precs"].values())]
     successors = list(household["precs"].keys())
-    succ_delays = household["succ_delays"] # need to change this format when sending it to the solver
+    succ_delays = household["succ_delays"]  # need to change this format when sending it to the solver
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
 
     # data preprocessing
-    run_costs = data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,
-                                   preferred_starts, care_factors, demands, cf_weight, cf_max)
+    heuristic_run_costs = data_preprocessing(num_intervals, num_tasks, heuristic_prices, earliest_starts, latest_ends,
+                                             durations, preferred_starts, care_factors, demands, cf_weight, cf_max)
+
+    optimal_run_costs = data_preprocessing(num_intervals, num_tasks, optimal_prices, earliest_starts, latest_ends,
+                                           durations, preferred_starts, care_factors, demands, cf_weight, cf_max)
 
     # heuristic algorithm -- optimistic greedy search algorithm (OGSA)
-    optimistic_starts, optimistic_profile, optimistic_obj, optimistic_runtime \
-        = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors,
-                                      succ_delays, max_demand, run_costs[:], household["precs"], latest_ends, cf_max)
+    heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime \
+        = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors, succ_delays,
+                                      max_demand, heuristic_run_costs, household["precs"], latest_ends, cf_max)
 
     # optimisation solver -- constraint programming (CP)
     succ_delays = [x[0] for x in list(household["succ_delays"].values())]
     search = "int_search(actual_starts, {}, {}, complete)".format(var_selection, val_choice)
     optimal_profile, optimal_starts, optimal_obj, optimal_runtime \
-        = household_optimal_solving(num_intervals, num_tasks, prices_day, preferred_starts, earliest_starts,
+        = household_optimal_solving(num_intervals, num_tasks, optimal_prices, preferred_starts, earliest_starts,
                                     latest_ends, durations, demands, care_factors, no_precedences, precedents,
                                     successors, succ_delays, max_demand, model_file, solver_choice, m_type, s_type,
-                                    run_costs[:], search, cf_weight)
+                                    optimal_run_costs, search, cf_weight)
 
-    return optimistic_starts, optimistic_profile, optimistic_obj, optimistic_runtime, \
-        optimal_starts, optimal_profile, optimal_obj, optimal_runtime
+    return heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime, \
+           optimal_starts, optimal_profile, optimal_obj, optimal_runtime

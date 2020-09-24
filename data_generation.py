@@ -9,7 +9,7 @@ from more_itertools import grouper
 from multiple.fixed_parameter import *
 
 
-def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit, pricing_table_weight):
+def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):
     models = dict()
     models["cp"] = dict()
     models["cp"]["pre"] = f_cp_pre
@@ -18,7 +18,6 @@ def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit, pricing_table_w
     solvers = dict()
     solvers["cp"] = "gecode"
 
-    demand_level_scale = demand_limit * pricing_table_weight
     pricing_table = dict()
     pricing_table[k0_price_levels] = []
     pricing_table[k0_demand_table] = dict()
@@ -34,7 +33,7 @@ def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_limit, pricing_table_w
             for i_col, col in enumerate(pricing_table_row[1:]):
                 if i_col not in pricing_table[k0_demand_table]:
                     pricing_table[k0_demand_table][i_col] = dict()
-                pricing_table[k0_demand_table][i_col][i_row] = round(col * demand_level_scale, -3)
+                pricing_table[k0_demand_table][i_col][i_row] = round(col * demand_level_scale, -zero_digit)
 
     return models, solvers, pricing_table
 
@@ -201,6 +200,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
     # initialise demand profile tracker
     area = dict()
+
     area[k0_profile] = dict()
     area[k0_profile][k1_interval] = dict()
     area[k0_profile][k1_period] = dict()
@@ -212,23 +212,28 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
     area[k0_profile][k1_optimal][0] = area_demand_profile
     area[k0_profile][k1_heuristic][0] = area_demand_profile
 
+    area[k0_profile_updated] = dict()
+    area[k0_profile_updated][k1_optimal] = dict()
+    area[k0_profile_updated][k1_heuristic] = dict()
+
     # initialise objective value tracker
     area[k0_obj] = dict()
     area[k0_cost] = dict()
-    area[k0_inconvenient] = dict()
+    area[k0_penalty] = dict()
     area[k0_ss] = dict()
-    area[k0_price_history] = dict()
+    area[k0_prices] = dict()
 
     area[k0_obj][k1_optimal] = dict()
-    area[k0_obj][k1_heuristic] = dict()
     area[k0_cost][k1_optimal] = dict()
-    area[k0_cost][k1_heuristic] = dict()
-    area[k0_inconvenient][k1_optimal] = dict()
-    area[k0_inconvenient][k1_heuristic] = dict()
+    area[k0_penalty][k1_optimal] = dict()
     area[k0_ss][k1_optimal] = dict()
+    area[k0_prices][k1_optimal] = dict()
+
+    area[k0_obj][k1_heuristic] = dict()
+    area[k0_cost][k1_heuristic] = dict()
+    area[k0_penalty][k1_heuristic] = dict()
     area[k0_ss][k1_heuristic] = dict()
-    area[k0_price_history][k1_optimal] = dict()
-    area[k0_price_history][k1_heuristic] = dict()
+    area[k0_prices][k1_heuristic] = dict()
 
     # write household data and area data into files\
     if not os.path.exists(data_folder):

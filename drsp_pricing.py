@@ -8,8 +8,9 @@ def pricing_cost(demand_profile, pricing_table, cost_function_type):
     cost = 0
     price_levels = pricing_table[k0_price_levels]
 
-    for d, demand_level in zip(demand_profile, pricing_table[k0_demand_table]):
-        level = bisect_left(demand_level, d)
+    for demand_period, demand_level_period in zip(demand_profile, pricing_table[k0_demand_table].values()):
+        demand_level = list(demand_level_period.values())
+        level = bisect_left(demand_level, demand_period)
         if level != len(demand_level):
             price = price_levels[level]
         else:
@@ -18,10 +19,10 @@ def pricing_cost(demand_profile, pricing_table, cost_function_type):
 
         if "piece-wise" in cost_function_type and level > 0:
             cost += demand_level[0] * price_levels[0]
-            cost += (d - demand_level[level - 1]) * price
+            cost += (demand_period - demand_level[level - 1]) * price
             cost += sum([(demand_level[i] - demand_level[i - 1]) * price_levels[i] for i in range(1, level)])
         else:
-            cost += d * price
+            cost += demand_period * price
 
     return price_day, cost
 
@@ -37,12 +38,18 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, cos
     # apply the FW algorithm
     else:
         step_profile = []
-        for dp, dn, d_levels in zip(demand_profile_pre, demand_profile_new, pricing_table[k0_demand_table]):
+        for dp, dn, d_levels_period in \
+                zip(demand_profile_pre, demand_profile_new, pricing_table[k0_demand_table].values()):
+            d_levels = list(d_levels_period.values())
             step = 1
             dd = dn - dp
             if dd != 0:
-                dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
-                step = (dl - dp) / dd
+                try:
+                    dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
+                    step = (dl - dp) / dd
+                    step = min(1, step)
+                except ValueError:
+                    pass  # keep step = 1
             step_profile.append(step)
 
         best_step_size = min(step_profile)
