@@ -6,7 +6,7 @@ import numpy as np
 from numpy import sqrt, pi, random
 import os
 from more_itertools import grouper
-from multiple.fixed_parameter import *
+from multiple.input_parameter import *
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):

@@ -2,41 +2,9 @@ from more_itertools import grouper
 from multiple.data_generation import *
 from multiple.household_scheduling import *
 from multiple.drsp_pricing import *
-from multiple.fixed_parameter import *
+from multiple.input_parameter import *
 from time import strftime, localtime
 import timeit
-
-# time related parameters
-no_intervals = 144
-no_periods = 48
-no_intervals_periods = int(no_intervals / no_periods)
-
-# household related parameters
-new_households = True
-# new_households = False
-no_households = 1000
-no_tasks = 5
-max_demand_multiplier = no_tasks
-care_f_max = 10
-care_f_weight = 100
-
-# pricing related parameters
-pricing_table_weight = 1.0
-cost_type = "linear"  # or "piece-wise linear"
-cost_type = "piece-wise"
-zero_digit = 2
-
-# solver related parameters
-var_selection = "smallest"
-val_choice = "indomain_min"
-model_type = "pre"
-solver_type = "cp"
-
-# external file related parameters
-file_cp_pre = 'models/Household-cp-pre.mzn'
-file_cp_ini = 'models/Household-cp.mzn'
-file_pricing_table = 'inputs/pricing_table_0.csv'
-file_household_area_folder = 'data/'
 
 
 def iteration():

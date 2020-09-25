@@ -2,7 +2,7 @@ import numpy as np
 import timeit
 from minizinc import *
 import random as r
-from multiple.fixed_parameter import *
+from multiple.input_parameter import *
 
 
 def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,
@@ -35,7 +35,7 @@ def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, la
 
 
 def household_heuristic_solving(num_intervals, num_tasks, durations, demands, predecessors, successors,
-                                succ_delays, max_demand, run_costs, precedents, latest_ends, cf_max):
+                                succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max):
     start_time = timeit.default_timer()
 
     actual_starts = []
@@ -72,12 +72,13 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
 
         # if i has successors
         tasks_successors = check_if_successors_or_precedents_exist(task_id, predecessors, successors)
+        earliest_suc_lstart_w_delay = 0
         earliest_suc_lstart = num_intervals - 1
         if bool(tasks_successors):
             suc_durations = [durations[i2] for i2 in tasks_successors]
             suc_lends = [latest_ends[i2] for i2 in tasks_successors]
-            total_suc_duration = sum(suc_durations)
-            earliest_suc_lstart = min(suc_lends) - total_suc_duration + 1
+            earliest_suc_lstart = min([lend - dur for lend, dur in zip(suc_lends, suc_durations)])
+            # earliest_suc_lstart_w_delay = earliest_suc_lstart - succ_delay
             # suc_lstarts = [lend - dur + 1 for lend, dur in zip(suc_lends, suc_durations)]
             # earliest_suc_lstart = min(suc_lstarts)
 
@@ -95,43 +96,45 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         # search for all feasible intervals
         feasible_intervals = []
         for j in range(num_intervals):
-            if task_costs[j] < big_cost and j + duration - 1 < earliest_suc_lstart \
+            if task_costs[j] < big_cost and earliest_suc_lstart_w_delay < j < earliest_suc_lstart - duration + 1 \
                     and latest_pre_finish < j < latest_pre_finish_w_delay:
                 feasible_intervals.append(j)
 
-        if not bool(feasible_intervals):
-            print("error")
-
-        feasible_min_cost = min([task_costs[f] for f in feasible_intervals])
-        cheapest_intervals = [f for f in feasible_intervals if task_costs[f] == feasible_min_cost]
-        a_start = r.choice(cheapest_intervals)
-
-        # check max demand constraint
-        max_demand_starts = dict()
-        temp_profile = household_profile[:]
         try:
-            for d in range(a_start, a_start + duration):
-                temp_profile[d % num_intervals] += demand
-        except IndexError:
-            print("error")
-        temp_max_demand = max(temp_profile)
-        while temp_max_demand > max_demand and len(feasible_intervals) > 1:
+            feasible_min_cost = min([task_costs[f] for f in feasible_intervals])
+            cheapest_intervals = [f for f in feasible_intervals if task_costs[f] == feasible_min_cost]
+            a_start = r.choice(cheapest_intervals)
 
-            max_demand_starts[a_start] = temp_max_demand
-            feasible_intervals.remove(a_start)
-
-            feasible_min_cost = min([run_costs[task_id][f] for f in feasible_intervals])
-            feasible_min_cost_indices = [k for k, x in enumerate(run_costs[task_id]) if x == feasible_min_cost]
-            # a_start = r.choice(feasible_min_cost_indices)
-            a_start = feasible_min_cost_indices[0]
-
+            # check max demand constraint
+            max_demand_starts = dict()
             temp_profile = household_profile[:]
-            for d in range(a_start, a_start + duration):
-                temp_profile[d] += demand
+            try:
+                for d in range(a_start, a_start + duration):
+                    temp_profile[d % num_intervals] += demand
+            except IndexError:
+                print("error")
             temp_max_demand = max(temp_profile)
+            while temp_max_demand > max_demand and len(feasible_intervals) > 1:
 
-        if len(feasible_intervals) == 0 and not max_demand_starts:
-            a_start = min(max_demand_starts, key=max_demand_starts.get)
+                max_demand_starts[a_start] = temp_max_demand
+                feasible_intervals.remove(a_start)
+
+                feasible_min_cost = min([run_costs[task_id][f] for f in feasible_intervals])
+                feasible_min_cost_indices = [k for k, x in enumerate(run_costs[task_id]) if x == feasible_min_cost]
+                # a_start = r.choice(feasible_min_cost_indices)
+                a_start = feasible_min_cost_indices[0]
+
+                temp_profile = household_profile[:]
+                for d in range(a_start, a_start + duration):
+                    temp_profile[d] += demand
+                temp_max_demand = max(temp_profile)
+
+            if len(feasible_intervals) == 0 and not max_demand_starts:
+                a_start = min(max_demand_starts, key=max_demand_starts.get)
+
+        except ValueError:
+            print("No feasible intervals left for task", task_id)
+            a_start = preferred_starts[task_id]
 
         actual_starts.append(a_start)
         for d in range(a_start, a_start + duration):
@@ -236,7 +239,7 @@ def household_scheduling_subproblem \
     # heuristic algorithm -- optimistic greedy search algorithm (OGSA)
     heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime \
         = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors, succ_delays,
-                                      max_demand, heuristic_run_costs, household["precs"], latest_ends, cf_max)
+                                      max_demand, heuristic_run_costs, preferred_starts, latest_ends, cf_max)
 
     # optimisation solver -- constraint programming (CP)
     succ_delays = [x[0] for x in list(household["succ_delays"].values())]

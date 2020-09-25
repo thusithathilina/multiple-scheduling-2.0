@@ -1,6 +1,6 @@
 from bisect import bisect_left
 from multiple.cfunctions import find_ge, find_le
-from multiple.fixed_parameter import *
+from multiple.input_parameter import *
 
 
 def pricing_cost(demand_profile, pricing_table, cost_function_type):
