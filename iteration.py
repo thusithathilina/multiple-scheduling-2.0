@@ -3,6 +3,7 @@ from multiple.data_generation import *
 from multiple.household_scheduling import *
 from multiple.drsp_pricing import *
 from multiple.input_parameter import *
+from multiple.output_results import *
 from time import strftime, localtime
 import timeit
 
@@ -100,7 +101,9 @@ def iteration():
     print("Converged in {0} iteration".format(itr))
     print("---------- Iteration done! ----------")
 
-    # 4 - write results to files
+    # 4 - process results
+    output_date_time_folder = write_results(area, output_folder)
+    view_results(area, output_date_time_folder)
 
 
 iteration()

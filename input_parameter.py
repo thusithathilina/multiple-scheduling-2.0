@@ -52,3 +52,6 @@ k0_prices = "price_history"
 k0_price_levels = "price_levels"
 k0_demand_table = "demand_levels"
 
+# result related parameters
+output_folder = "results/"
+
