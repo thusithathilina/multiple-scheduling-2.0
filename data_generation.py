@@ -198,44 +198,29 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
-    # initialise demand profile tracker
     area = dict()
 
-    area[k0_profile] = dict()
-    area[k0_profile][k1_interval] = dict()
-    area[k0_profile][k1_period] = dict()
-    area[k0_profile][k1_optimal] = dict()
-    area[k0_profile][k1_heuristic] = dict()
+    def initialise_area_trackers(k0_key, k1_key):
+        if k0_key not in area:
+            area[k0_key] = dict()
+        area[k0_key][k1_key] = dict()
 
-    area[k0_profile][k1_interval][0] = area_demand_profile
-    area[k0_profile][k1_period][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    area[k0_profile][k1_optimal][0] = area_demand_profile
-    area[k0_profile][k1_heuristic][0] = area_demand_profile
+    # initialise demand profile tracker
+    area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+    k0_keys = [k0_profile, k0_obj, k0_cost, k0_penalty]
+    k1_keys = [k1_optimal, k1_heuristic, k1_optimal_fw, k1_heuristic_fw]
+    for k0 in k0_keys:
+        for k1 in k1_keys:
+            initialise_area_trackers(k0, k1)
+            area[k0][k1][0] = area_demand_profile_pricing
 
-    area[k0_profile_updated] = dict()
-    area[k0_profile_updated][k1_optimal] = dict()
-    area[k0_profile_updated][k1_heuristic] = dict()
+    k0_keys = [k0_ss, k0_prices]
+    k1_keys = [k1_optimal_fw, k1_heuristic_fw]
+    for k0 in k0_keys:
+        for k1 in k1_keys:
+            initialise_area_trackers(k0, k1)
 
-    # initialise objective value tracker
-    area[k0_obj] = dict()
-    area[k0_cost] = dict()
-    area[k0_penalty] = dict()
-    area[k0_ss] = dict()
-    area[k0_prices] = dict()
-
-    area[k0_obj][k1_optimal] = dict()
-    area[k0_cost][k1_optimal] = dict()
-    area[k0_penalty][k1_optimal] = dict()
-    area[k0_ss][k1_optimal] = dict()
-    area[k0_prices][k1_optimal] = dict()
-
-    area[k0_obj][k1_heuristic] = dict()
-    area[k0_cost][k1_heuristic] = dict()
-    area[k0_penalty][k1_heuristic] = dict()
-    area[k0_ss][k1_heuristic] = dict()
-    area[k0_prices][k1_heuristic] = dict()
-
-    # write household data and area data into files\
+    # write household data and area data into files
     if not os.path.exists(data_folder):
         os.makedirs(data_folder)
 

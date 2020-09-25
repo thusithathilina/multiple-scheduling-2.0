@@ -70,6 +70,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, cos
 
 
 def pricing_master_problem(iteration, pricing_table, area, cost_type):
+    # read the newly optimised demand profile
     heuristic_demand_profile_new = area[k0_profile][k1_heuristic][iteration]  # newly optimised demand profile
     optimal_demand_profile_new = area[k0_profile][k1_optimal][iteration]
 
@@ -79,10 +80,10 @@ def pricing_master_problem(iteration, pricing_table, area, cost_type):
         heuristic_prices_pre = None
         optimal_prices_pre = None
     else:
-        heuristic_demand_profile_pre = area[k0_profile][k1_heuristic][iteration - 1]
-        optimal_demand_profile_pre = area[k0_profile][k1_optimal][iteration - 1]
-        heuristic_prices_pre = area[k0_prices][k1_heuristic][iteration - 1]
-        optimal_prices_pre = area[k0_prices][k1_optimal][iteration - 1]
+        heuristic_demand_profile_pre = area[k0_profile][k1_heuristic_fw][iteration - 1]
+        optimal_demand_profile_pre = area[k0_profile][k1_optimal_fw][iteration - 1]
+        heuristic_prices_pre = area[k0_prices][k1_heuristic_fw][iteration - 1]
+        optimal_prices_pre = area[k0_prices][k1_optimal_fw][iteration - 1]
 
     heuristic_demand_profile_updated, heuristic_best_step_size, heuristic_price_day, heuristic_cost \
         = pricing_step_size(pricing_table, heuristic_demand_profile_pre, heuristic_demand_profile_new,

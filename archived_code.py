@@ -1,3 +1,4 @@
+# in household_scheduling.py
 # def optimised_profile(solutions, s_type, demands, durations):
 #     solutions = list(solutions.values())[0]
 #
@@ -42,3 +43,11 @@
 # pre_astart = actual_starts[pre_id]
 # pre_duration = durations[pre_id]
 # pre_finish_w_delay = pre_astart + pre_duration - 1 + pre_delay
+
+# in data_generation.py
+# area[k0_profile][k1_interval] = dict()
+# area[k0_profile][k1_period] = dict()
+# area[k0_profile][k1_interval][0] = area_demand_profile
+# area[k0_profile][k1_period][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+# area[k0_profile][k1_optimal_updated][0] = area_demand_profile
+# area[k0_profile][k1_heuristic_updated][0] = area_demand_profile

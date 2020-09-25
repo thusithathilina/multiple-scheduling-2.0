@@ -203,14 +203,14 @@ def household_scheduling_subproblem \
                  household, cf_weight, cf_max, area_prices, iteration,
                  model_file, m_type, s_type, solver_choice, var_selection, val_choice):
     # heuristic prices
-    heuristic_prices = area_prices[k1_heuristic][iteration - 1]
+    heuristic_prices = area_prices[k1_heuristic_fw][iteration - 1]
     if len(heuristic_prices) == num_periods:
         heuristic_prices = [int(p) for p in heuristic_prices[:num_periods] for _ in range(num_intervals_periods)]
     else:
         heuristic_prices = [int(p) for p in heuristic_prices]
 
     # optimal prices
-    optimal_prices = area_prices[k1_optimal][iteration - 1]
+    optimal_prices = area_prices[k1_optimal_fw][iteration - 1]
     if len(optimal_prices) == num_periods:
         optimal_prices = [int(p) for p in optimal_prices[:num_periods] for _ in range(num_intervals_periods)]
     else:

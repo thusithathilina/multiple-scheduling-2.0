@@ -5,8 +5,8 @@ no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
 new_households = True
-new_households = False
-no_households = 1000
+# new_households = False
+no_households = 500
 no_tasks = 5
 max_demand_multiplier = no_tasks
 care_f_max = 10
@@ -32,11 +32,12 @@ file_household_area_folder = 'data/'
 
 # demand profile related parameters
 k0_profile = "profile"
-k0_profile_updated = "profile_updated"
 k1_interval = "interval"
 k1_period = "period"
 k1_optimal = "optimal"
 k1_heuristic = "heuristic"
+k1_optimal_fw = "optimal_fw"
+k1_heuristic_fw = "heuristic_fw"
 
 
 # step size
