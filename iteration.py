@@ -65,7 +65,7 @@ def iteration():
     itr = 1
     total_runtime_heuristic = 0
     total_runtime_optimal = 0
-    while optimal_step_size > 0 and heuristic_step_size > 0:
+    while optimal_step_size > 0 or heuristic_step_size > 0:
 
         # 1.1 - reschedule given the prices at iteration k - 1
         heuristic_area_profile_scheduling = [0] * no_intervals
@@ -86,6 +86,9 @@ def iteration():
             total_runtime_optimal += optimal_runtime
             print("household {}".format(key))
 
+        area[k0_time][k1_optimal_fw] = total_runtime_optimal
+        area[k0_time][k1_heuristic_fw] = total_runtime_heuristic
+
         # 1.2 - aggregate rescheduled demand profile for the pricing purpose
         area[k0_profile][k1_heuristic][itr] \
             = [sum(x) for x in grouper(heuristic_area_profile_scheduling, no_intervals_periods)]
@@ -96,8 +99,8 @@ def iteration():
         heuristic_demand_profile_updated, heuristic_step_size, heuristic_prices, heuristic_cost, \
         optimal_demand_profile_updated, optimal_step_size, optimal_prices, optimal_cost \
             = pricing_master_problem(itr, pricing_table, area, cost_type)
-        print("step size at iteration {}: optimal = {}, heuristic = {}"
-              .format(itr, float(optimal_step_size), float(heuristic_step_size)))
+        print("step size at iteration {}: heuristic = {}, optimal = {}"
+              .format(itr, float(heuristic_step_size), float(optimal_step_size)))
 
         # 2.2 - update the demand profiles, prices and the step size
         update_area_trackers(itr, k1_optimal_fw, optimal_demand_profile_updated,

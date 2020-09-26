@@ -48,7 +48,7 @@ def write_results(area_res, out_folder, str_sum):
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     dict_to_pd_dt(k0_keys, k1_keys)
 
-    k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_ss]
+    k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_ss, k0_time]
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     combine_dict_to_pd_dt(k0_keys, k1_keys)
 

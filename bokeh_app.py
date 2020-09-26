@@ -48,6 +48,8 @@ def view_results(date_folder, time_folder):
         dict_to_pd_dt(area_res, demands_prices_fw_dict, k0_keys, k1_keys)
 
         k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_ss]
+        if k0_time in area_res:
+            k0_keys.append(k0_time)
         k1_keys = [k1_optimal_fw, k1_heuristic_fw]
         combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_keys)
 

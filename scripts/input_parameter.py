@@ -6,7 +6,7 @@ no_intervals_periods = int(no_intervals / no_periods)
 # household related parameters
 new_households = True
 # new_households = False
-no_households = 500
+no_households = 100
 no_tasks = 5
 max_demand_multiplier = no_tasks
 care_f_max = 10
@@ -15,7 +15,7 @@ care_f_weight = 10
 # pricing related parameters
 pricing_table_weight = 1.0
 cost_type = "linear"
-# cost_type = "piece-wise"
+cost_type = "piece-wise"
 zero_digit = 2
 
 # solver related parameters
@@ -46,6 +46,8 @@ k0_obj = "objective"
 k0_prices = "prices"
 k0_price_levels = "price_levels"
 k0_demand_table = "demand_levels"
+# run time related
+k0_time = "reschedule_time"
 
 # k1_interval = "interval"
 # k1_period = "period"

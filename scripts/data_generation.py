@@ -127,7 +127,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             precedors[task].append(previous)
             succ_delays[task].append(delay)
 
-    for t in range(1, num_tasks):
+    for t in range(num_tasks, num_tasks):
         if r.choice([True, False]):
         # if True:
             previous_tasks = list(range(t))
@@ -214,7 +214,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
             initialise_area_trackers(k0, k1)
             area[k0][k1][0] = area_demand_profile_pricing
 
-    k0_keys = [k0_ss, k0_prices]
+    k0_keys = [k0_ss, k0_prices, k0_time]
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     for k0 in k0_keys:
         for k1 in k1_keys:
