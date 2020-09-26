@@ -1,8 +1,7 @@
-import numpy as np
 import timeit
 from minizinc import *
 import random as r
-from multiple.input_parameter import *
+from multiple.scripts.input_parameter import *
 
 
 def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,

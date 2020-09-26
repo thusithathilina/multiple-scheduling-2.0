@@ -27,31 +27,32 @@ solver_type = "cp"
 # external file related parameters
 file_cp_pre = 'models/Household-cp-pre.mzn'
 file_cp_ini = 'models/Household-cp.mzn'
-file_pricing_table = 'inputs/pricing_table_0.csv'
+file_pricing_table = 'data/pricing_table_0.csv'
 file_household_area_folder = 'data/'
+file_probability = 'data/probability.csv'
+file_demand_list = 'data/demands_list.csv'
 
-# demand profile related parameters
-k0_profile = "profile"
-k1_interval = "interval"
-k1_period = "period"
+# demand related parameters
+k0_profile = "demands"
+k0_demand_max = "max_demand"
+k0_par = "PAR"
+# step size
+k0_ss = "step_size"
+# objective related parameters
+k0_cost = "cost"
+k0_penalty = "inconvenient"
+k0_obj = "objective"
+# pricing related parameters
+k0_prices = "prices"
+k0_price_levels = "price_levels"
+k0_demand_table = "demand_levels"
+
+# k1_interval = "interval"
+# k1_period = "period"
 k1_optimal = "optimal"
 k1_heuristic = "heuristic"
 k1_optimal_fw = "optimal_fw"
 k1_heuristic_fw = "heuristic_fw"
-
-
-# step size
-k0_ss = "step_size"
-
-# objective related parameters
-k0_cost = "cost"
-k0_penalty = "inconvenient"
-k0_obj = "obj"
-
-# pricing related parameters
-k0_prices = "price_history"
-k0_price_levels = "price_levels"
-k0_demand_table = "demand_levels"
 
 # result related parameters
 output_folder = "results/"

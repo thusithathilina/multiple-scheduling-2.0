@@ -6,7 +6,7 @@ import numpy as np
 from numpy import sqrt, pi, random
 import os
 from more_itertools import grouper
-from multiple.input_parameter import *
+from multiple.scripts.input_parameter import *
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):
@@ -65,12 +65,12 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
 
 
 def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks, p_d,
-                         max_demand_multiplier, cf_max):
+                         max_demand_multiplier, cf_max, f_demand_list):
     p_d_short = [int(p) for p in p_d[0]]
     sum_t = sum(p_d_short)
     p_d_short = [p / sum_t for p in p_d_short]
 
-    l_demands = genfromtxt('inputs/demands_list.csv', delimiter=',', dtype="float")
+    l_demands = genfromtxt(f_demand_list, delimiter=',', dtype="float")
 
     # I meant mean value is 40 minutes
     mean_value = 40.0 / (24.0 * 60.0 / num_intervals)
@@ -167,8 +167,8 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
 
 def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks, cf_weight, cf_max, max_demand_multiplier):
-    probability = genfromtxt('inputs/probability.csv', delimiter=',', dtype="float")
+                    num_households, num_tasks, cf_weight, cf_max, max_d_multiplier, f_probability, f_demand_list):
+    probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
     households = dict()
     area_demand_profile = [0] * num_intervals
@@ -177,7 +177,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
         num_precedences, precedors, succ_delays, max_demand, household_profile \
             = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks,
-                                   probability, max_demand_multiplier, cf_max)
+                                   probability, max_d_multiplier, cf_max, f_demand_list)
 
         household_key = h
         households[household_key] = dict()
@@ -207,7 +207,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
     # initialise demand profile tracker
     area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    k0_keys = [k0_profile, k0_obj, k0_cost, k0_penalty]
+    k0_keys = [k0_profile, k0_obj, k0_cost, k0_penalty, k0_demand_max, k0_par]
     k1_keys = [k1_optimal, k1_heuristic, k1_optimal_fw, k1_heuristic_fw]
     for k0 in k0_keys:
         for k1 in k1_keys:

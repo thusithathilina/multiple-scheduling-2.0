@@ -1,14 +1,14 @@
-from more_itertools import grouper
-from multiple.data_generation import *
-from multiple.household_scheduling import *
-from multiple.drsp_pricing import *
-from multiple.input_parameter import *
-from multiple.output_results import write_results
-from time import strftime, localtime
-import timeit
+from multiple.scripts.data_generation import *
+from multiple.scripts.household_scheduling import *
+from multiple.scripts.drsp_pricing import *
+from multiple.scripts.input_parameter import *
+from multiple.scripts.output_results import write_results
 
 
 def iteration():
+    def average(lst):
+        return sum(lst) / len(lst)
+
     def update_area_trackers(i, result_type, demand_profile, obj, cost, penalty, step_size, prices):
         area[k0_obj][result_type][i] = obj
         area[k0_cost][result_type][i] = cost
@@ -16,17 +16,22 @@ def iteration():
         area[k0_ss][result_type][i] = step_size
         area[k0_prices][result_type][i] = prices
         area[k0_profile][result_type][i] = demand_profile
+        max_demand = max(demand_profile)
+        area[k0_demand_max][result_type][i] = max_demand
+        area[k0_par][result_type][i] = round(average(demand_profile) / max_demand, 2)
 
     # 0 - initialise experiment (iteration = 0)
     itr = 0
     print("---------- Experiment Summary ----------")
-    print("{0} households, {1} tasks per household".format(no_households, no_tasks))
+    str_summary = "{0} households, {1} tasks per household".format(no_households, no_tasks)
+    print(str_summary)
     print("---------- Experiments begin! ----------")
 
     # 0.1 - generation household data and the total preferred demand profile
     if new_households:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
-                                           no_households, no_tasks, care_f_weight, care_f_max, max_demand_multiplier)
+                                           no_households, no_tasks, care_f_weight, care_f_max, max_demand_multiplier,
+                                           file_probability, file_demand_list)
         print("Household data created...")
     else:
         households, area = area_read(file_household_area_folder)
@@ -60,7 +65,7 @@ def iteration():
     itr = 1
     total_runtime_heuristic = 0
     total_runtime_optimal = 0
-    while optimal_step_size > 0.01:
+    while optimal_step_size > 0 and heuristic_step_size > 0:
 
         # 1.1 - reschedule given the prices at iteration k - 1
         heuristic_area_profile_scheduling = [0] * no_intervals
@@ -108,7 +113,7 @@ def iteration():
     print("---------- Iteration done! ----------")
 
     # 4 - process results
-    output_date_time_folder = write_results(area, output_folder)
+    output_date_time_folder = write_results(area, output_folder, str_summary)
     # view_results(area, output_date_time_folder)
 
 

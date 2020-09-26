@@ -1,6 +1,6 @@
 from bisect import bisect_left
-from multiple.cfunctions import find_ge, find_le
-from multiple.input_parameter import *
+from multiple.scripts.cfunctions import find_ge, find_le
+from multiple.scripts.input_parameter import *
 
 
 def pricing_cost(demand_profile, pricing_table, cost_function_type):
@@ -23,6 +23,7 @@ def pricing_cost(demand_profile, pricing_table, cost_function_type):
             cost += sum([(demand_level[i] - demand_level[i - 1]) * price_levels[i] for i in range(1, level)])
         else:
             cost += demand_period * price
+        cost = round(cost, 2)
 
     return price_day, cost
 
@@ -52,7 +53,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, cos
                 if dd != 0:
                     try:
                         dl = find_ge(d_levels, dp) if dd > 0 else find_le(d_levels, dp)
-                        step = (dl - dp) / dd
+                        step = round((dl - dp) / dd, 2)
                         step = min(1, step)
                     except ValueError:
                         pass
