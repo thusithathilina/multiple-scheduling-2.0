@@ -51,3 +51,10 @@
 # area[k0_profile][k1_period][0] = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
 # area[k0_profile][k1_optimal_updated][0] = area_demand_profile
 # area[k0_profile][k1_heuristic_updated][0] = area_demand_profile
+
+# change_of_cost = cost_updated - cost_update_pre
+# change_of_gradient = sum([d_c * (p_n - p_p) for d_c, p_n, p_p in
+#                          zip(demand_profile_changed, price_updated, prices_pre)])
+# print(price_updated)
+# print("change of cost", change_of_cost)
+# change_of_gradient = abs(change_of_gradient)

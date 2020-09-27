@@ -4,8 +4,8 @@ import random as r
 from multiple.scripts.input_parameter import *
 
 
-def data_preprocessing(num_intervals, num_tasks, prices_day, earliest_starts, latest_ends, durations,
-                       preferred_starts, care_factors, demands, cf_weight, cf_max):
+def data_preprocessing(num_intervals, num_tasks, demands, prices_day, earliest_starts, latest_ends, durations,
+                       preferred_starts, care_factors, cf_weight, cf_max):
     max_demand = max(demands)
     max_duration = max(durations)
     run_costs = []
@@ -194,28 +194,25 @@ def household_optimal_solving \
         for t in range(a_start, a_start + duration):
             optimal_demand_profile[t % num_intervals] += demand
 
-    return optimal_demand_profile, actual_starts, obj, time
+    return actual_starts, optimal_demand_profile, obj, time
+
+
+def save_results(results, k1_algorithm_scheduling, demands_new, obj, penalty, time):
+    results[k1_algorithm_scheduling] = dict()
+    results[k1_algorithm_scheduling][k0_demand] = demands_new
+    results[k1_algorithm_scheduling][k0_obj] = obj
+    results[k1_algorithm_scheduling][k0_penalty] = penalty
+    results[k1_algorithm_scheduling][k0_time] = time
+
+    return results
 
 
 def household_scheduling_subproblem \
                 (num_intervals, num_tasks, num_periods, num_intervals_periods,
                  household, cf_weight, cf_max, area_prices, iteration,
-                 model_file, m_type, s_type, solver_choice, var_selection, val_choice):
-    # heuristic prices
-    heuristic_prices = area_prices[k1_heuristic_fw][iteration - 1]
-    if len(heuristic_prices) == num_periods:
-        heuristic_prices = [int(p) for p in heuristic_prices[:num_periods] for _ in range(num_intervals_periods)]
-    else:
-        heuristic_prices = [int(p) for p in heuristic_prices]
+                 model_file, m_type, s_type, solver_choice, var_sel, val_cho):
 
-    # optimal prices
-    optimal_prices = area_prices[k1_optimal_fw][iteration - 1]
-    if len(optimal_prices) == num_periods:
-        optimal_prices = [int(p) for p in optimal_prices[:num_periods] for _ in range(num_intervals_periods)]
-    else:
-        optimal_prices = [int(p) for p in optimal_prices]
-
-    # household data
+    # extract household data
     demands = household["demands"]
     durations = household["durs"]
     earliest_starts = household["ests"]
@@ -228,26 +225,50 @@ def household_scheduling_subproblem \
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
 
-    # data preprocessing
-    heuristic_run_costs = data_preprocessing(num_intervals, num_tasks, heuristic_prices, earliest_starts, latest_ends,
-                                             durations, preferred_starts, care_factors, demands, cf_weight, cf_max)
+    def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
 
-    optimal_run_costs = data_preprocessing(num_intervals, num_tasks, optimal_prices, earliest_starts, latest_ends,
-                                           durations, preferred_starts, care_factors, demands, cf_weight, cf_max)
+        # the FW prices at iteration k - 1
+        prices = area_prices[k1_algorithm_fw][iteration - 1]
+        if len(prices) == num_periods:
+            prices = [int(p) for p in prices[:num_periods] for _ in range(num_intervals_periods)]
+        else:
+            prices = [int(p) for p in prices]
 
-    # heuristic algorithm -- optimistic greedy search algorithm (OGSA)
-    heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime \
-        = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors, succ_delays,
-                                      max_demand, heuristic_run_costs, preferred_starts, latest_ends, cf_max)
+        # data preprocessing
+        run_costs = data_preprocessing(num_intervals, num_tasks, demands, prices,
+                                       earliest_starts, latest_ends, durations, preferred_starts,
+                                       care_factors, cf_weight, cf_max)
 
-    # optimisation solver -- constraint programming (CP)
-    succ_delays = [x[0] for x in list(household["succ_delays"].values())]
-    search = "int_search(actual_starts, {}, {}, complete)".format(var_selection, val_choice)
-    optimal_profile, optimal_starts, optimal_obj, optimal_runtime \
-        = household_optimal_solving(num_intervals, num_tasks, optimal_prices, preferred_starts, earliest_starts,
-                                    latest_ends, durations, demands, care_factors, no_precedences, precedents,
-                                    successors, succ_delays, max_demand, model_file, solver_choice, m_type, s_type,
-                                    optimal_run_costs, search, cf_weight)
+        if "heuristic" in k1_algorithm_scheduling:
+            actual_starts, demands_new, obj, runtime \
+                = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors,
+                                              succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max)
 
-    return heuristic_starts, heuristic_profile, heuristic_obj, heuristic_runtime, \
-           optimal_starts, optimal_profile, optimal_obj, optimal_runtime
+        else:  # "optimal" in k1_algorithm
+            succ_delays2 = [x[0] for x in list(household["succ_delays"].values())]
+            search = "int_search(actual_starts, {}, {}, complete)".format(var_sel, val_cho)
+            actual_starts, demands_new, obj, runtime \
+                = household_optimal_solving(num_intervals, num_tasks, prices, preferred_starts, earliest_starts,
+                                            latest_ends, durations, demands, care_factors, no_precedences, precedents,
+                                            successors, succ_delays2, max_demand, model_file, solver_choice, m_type,
+                                            s_type, run_costs, search, cf_weight)
+
+        penalty = sum([abs(pst - ast) * cf_weight * cf for pst, ast, cf
+                       in zip(preferred_starts, actual_starts, care_factors)])
+
+        return actual_starts, demands_new, obj, penalty, runtime
+
+    rescheduling_results = dict()
+
+    heuristic_starts, heuristic_demands_new, heuristic_obj, heuristic_penalty, heuristic_runtime \
+        = procedure(k1_heuristic_scheduling, k1_heuristic_fw)
+    rescheduling_results = save_results(rescheduling_results, k1_heuristic_scheduling,
+                                        heuristic_demands_new, heuristic_obj, heuristic_penalty, heuristic_runtime)
+
+    optimal_starts, optimal_demands_new, optimal_obj, optimal_penalty, optimal_runtime \
+        = procedure(k1_optimal_scheduling, k1_optimal_fw)
+    rescheduling_results = save_results(rescheduling_results, k1_optimal_scheduling,
+                                        optimal_demands_new, optimal_obj, optimal_penalty, optimal_runtime)
+
+    return rescheduling_results
+

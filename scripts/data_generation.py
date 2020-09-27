@@ -7,6 +7,7 @@ from numpy import sqrt, pi, random
 import os
 from more_itertools import grouper
 from multiple.scripts.input_parameter import *
+from multiple.scripts.cfunctions import average
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):
@@ -205,16 +206,32 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
             area[k0_key] = dict()
         area[k0_key][k1_key] = dict()
 
-    # initialise demand profile tracker
+    # initialise trackers
     area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    k0_keys = [k0_profile, k0_obj, k0_cost, k0_penalty, k0_demand_max, k0_par]
-    k1_keys = [k1_optimal, k1_heuristic, k1_optimal_fw, k1_heuristic_fw]
+    # track four types of demand profiles, prices, objective values, costs, penalties, max demands and PARs
+    k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time]
+    k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
+    area[k0_demand_max] = dict()
+    area[k0_demand_total] = dict()
+    area[k0_par] = dict()
     for k0 in k0_keys:
         for k1 in k1_keys:
             initialise_area_trackers(k0, k1)
-            area[k0][k1][0] = area_demand_profile_pricing
+            # initial values for four kinds of demand profiles, max demands, PARs and the penalty
+            if k0 == k0_demand:
+                area[k0][k1][0] = area_demand_profile_pricing
+                max_demand = max(area_demand_profile_pricing)
+                area[k0_demand_max][k1] = dict()
+                area[k0_demand_total][k1] = dict()
+                area[k0_par][k1] = dict()
+                area[k0_demand_max][k1][0] = max_demand
+                area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
+                area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
 
-    k0_keys = [k0_ss, k0_prices, k0_time]
+            if k0 == k0_penalty:
+                area[k0_penalty][k1][0] = 0
+
+    k0_keys = [k0_step]
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     for k0 in k0_keys:
         for k1 in k1_keys:

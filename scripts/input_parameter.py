@@ -33,11 +33,13 @@ file_probability = 'data/probability.csv'
 file_demand_list = 'data/demands_list.csv'
 
 # demand related parameters
-k0_profile = "demands"
+# k0_starts = "start_times"
+k0_demand = "demands"
 k0_demand_max = "max_demand"
+k0_demand_total = "total_demand"
 k0_par = "PAR"
 # step size
-k0_ss = "step_size"
+k0_step = "step_size"
 # objective related parameters
 k0_cost = "cost"
 k0_penalty = "inconvenient"
@@ -51,8 +53,8 @@ k0_time = "reschedule_time"
 
 # k1_interval = "interval"
 # k1_period = "period"
-k1_optimal = "optimal"
-k1_heuristic = "heuristic"
+k1_optimal_scheduling = "optimal"
+k1_heuristic_scheduling = "heuristic"
 k1_optimal_fw = "optimal_fw"
 k1_heuristic_fw = "heuristic_fw"
 

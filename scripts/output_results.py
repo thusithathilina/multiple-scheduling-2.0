@@ -28,27 +28,30 @@ def write_results(area_res, out_folder, str_sum):
 
     def dict_to_pd_dt(k0_ks, k1_ks):
         for k0 in k0_ks:
-            for k1 in k1_ks:
-                df = pd.DataFrame.from_dict(area_res[k0][k1], orient='index')
-                df.to_csv(out_date_time_folder + "{}-{}.csv".format(k0, k1))
+            if k0 in area_res:
+                for k1 in k1_ks:
+                    if k1 in area_res[k0]:
+                        df = pd.DataFrame.from_dict(area_res[k0][k1], orient='index')
+                        df.to_csv(out_date_time_folder + "{}-{}.csv".format(k0, k1))
 
     def combine_dict_to_pd_dt(k0_ks, k1_ks):
         for k1 in k1_ks:
             combined_dict = dict()
             for k0 in k0_ks:
-                combined_dict[k0] = area_res[k0][k1]
+                if k0 in area_res:
+                    combined_dict[k0] = area_res[k0][k1]
             df = pd.DataFrame(combined_dict, columns=k0_ks)
             df.to_csv(out_date_time_folder + "{}-{}.csv".format("others", k1))
 
-    k0_keys = [k0_profile]
-    k1_keys = [k1_optimal, k1_heuristic]
+    k0_keys = [k0_demand]
+    k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling]
     dict_to_pd_dt(k0_keys, k1_keys)
 
-    k0_keys = [k0_profile, k0_prices]
+    k0_keys = [k0_demand, k0_prices]
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     dict_to_pd_dt(k0_keys, k1_keys)
 
-    k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_ss, k0_time]
+    k0_keys = [k0_demand_max, k0_demand_total, k0_par, k0_obj, k0_cost, k0_penalty, k0_step, k0_time]
     k1_keys = [k1_optimal_fw, k1_heuristic_fw]
     combine_dict_to_pd_dt(k0_keys, k1_keys)
 

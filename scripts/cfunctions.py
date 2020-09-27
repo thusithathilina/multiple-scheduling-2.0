@@ -39,3 +39,7 @@ def find_ge(a, x):
     if i != len(a):
         return a[i]
     raise ValueError
+
+
+def average(lst):
+    return sum(lst) / len(lst)
