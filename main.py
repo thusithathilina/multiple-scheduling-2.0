@@ -12,9 +12,10 @@ from scripts.iteration import *
 from datetime import date
 
 
-exp_date = "2020-09-28"
-exp_time = "03-57-48-505121"
+exp_date = None
+exp_time = None
 parent_folder = "multiple/"
+# parent_folder = ""
 results_folder = parent_folder + "results/"
 
 
@@ -38,6 +39,7 @@ def view_results(date_folder, time_folder):
             df = pd.DataFrame(combined_dict, columns=k0_ks).reset_index(drop=True)
             target_dict[k1] = df
 
+    # ---------- initialise data trackers ----------
     def load_data(f_date, f_time):
         date_time_folder = results_folder + "{}/{}/".format(f_date, f_time)
         with open(date_time_folder + "area_output.pkl", 'rb') as f2:
@@ -60,11 +62,13 @@ def view_results(date_folder, time_folder):
         k1_keys = [k1_optimal_fw, k1_heuristic_fw]
         combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_keys)
 
-    # ---------- initialise data trackers ----------
-
     prices_dict = dict()
     demands_prices_fw_dict = dict()
     others_combined_dict = dict()
+    if date_folder is None:
+        date_folder = str(date.today())
+    if time_folder is None:
+        time_folder = [dirs for root, dirs, _ in walk(results_folder + date_folder) if dirs != []][0][0]
     load_data(date_folder, time_folder)
 
     # ------------------------------ 1. Data Tab ------------------------------ #
@@ -72,26 +76,25 @@ def view_results(date_folder, time_folder):
     # ---------- 1.1. initialise web widgets ----------
 
     # 1.1.1 - date picker: choose the date of the results
-    date_default = date_folder
+    date_default = str(date.today())
     date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
     date_min = "2020-09-27"
-    date_max = str(date.today())
+    date_max = date_default
     date_picker = DatePicker(title='Select date:', value=date_default, min_date=date_min, max_date=date_max)
 
     # 1.1.2 - select: choose the time of the results
-    select = Select(title="Select time:", value=time_folder)
+    select_time = Select(title="Select time:", value=time_folder)
 
     # 1.1.3 - select: choose the algorithm
-    selected_algorithm = k1_optimal_fw
-    selected_algorithm_options = [k1_optimal_fw, k1_heuristic_fw]
-    select_algorithm = Select(title="Select algorithm:", value=selected_algorithm, options=selected_algorithm_options)
+    chosen_algorithm = k1_optimal_fw
+    algorithm_options = [k1_optimal_fw, k1_heuristic_fw]
+    select_algorithm = Select(title="Select algorithm:", value=chosen_algorithm, options=algorithm_options)
 
     # 1.1.4 - div: show the experiment summary
     div = Div()
 
     # 1.1.5 - radio buttons: choose the date source
-    LABELS = ["Demand Profile", "Price Profile", "Others"]
-    radio_button_group = RadioButtonGroup(labels=LABELS, active=2)
+    radio_button_group = RadioButtonGroup(labels=["Statistics", "Demand Profile", "Price Profile"], active=0)
 
     # 1.1.6 - data table: show numbers
     source = ColumnDataSource()
@@ -159,24 +162,23 @@ def view_results(date_folder, time_folder):
 
     def update_select_options(attr, old, new):
         select_opt = [dirs for root, dirs, _ in walk(results_folder + "{}".format(new)) if dirs != []][0]
-        select.options = select_opt
-        select.value = select_opt[-1]
+        select_time.options = select_opt
+        select_time.value = select_opt[-1]
 
         # todo - will try to sort the folders later again
         # selected_date_folder = Path(results_folder + "{}".format(selected_date))
         # select_options = sorted(selected_date_folder.iterdir(), key=path.getmtime, reverse=True)
         # select_options = [x.parts[-1] for x in select_options if x.is_dir()]
 
-    def update_data_table_content(attr, old, new):
+    def update_data_table_content_and_graph(attr, old, new):
         # print(select_algorithm.value)
-        if new == 0:  # demand
+        if new == 1:  # demand
             source.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
-        elif new == 1:  # prices
+        if new == 2:  # prices
             source.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        elif new == 2:  # others
+        if new == 0:  # others
             # display_keys = list(source.data.keys())
             source.data = others_combined_dict[select_algorithm.value]
-            source_combined.data = others_combined_dict[select_algorithm.value]
         # print(source.data)
         columns_keys = source.data.keys()
         table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
@@ -184,6 +186,8 @@ def view_results(date_folder, time_folder):
                          for i in columns_keys]
         data_table.columns = table_columns
         data_table.update()
+
+        source_combined.data = others_combined_dict[select_algorithm.value]
         p_cost.update()
 
     def update_div_content(attr, d_f, t_f):
@@ -199,29 +203,29 @@ def view_results(date_folder, time_folder):
         t_folder = new
         load_data(d_folder, t_folder)
         active_radio_button = radio_button_group.active
-        update_data_table_content(None, None, active_radio_button)
+        update_data_table_content_and_graph(None, None, active_radio_button)
         update_div_content(None, d_folder, t_folder)
 
     def switch_algorithm(attr, old, new):
         active_radio_button = radio_button_group.active
-        update_data_table_content(None, None, active_radio_button)
+        update_data_table_content_and_graph(None, None, active_radio_button)
 
     update_select_options(None, None, date_picker.value)
-    update_data_table_content(None, None, 2)
-    update_div_content(None, date_folder, time_folder)
+    update_data_table_content_and_graph(None, None, 2)
+    update_div_content(None, date_picker.value, select_time.value)
 
     # ------------------------------ 5. assign event functions to widgets ------------------------------ #
 
     date_picker.on_change("value", update_select_options)
-    select.on_change("value", update_data_table_source)
+    select_time.on_change("value", update_data_table_source)
     select_algorithm.on_change("value", switch_algorithm)
-    radio_button_group.on_change("active", update_data_table_content)
+    radio_button_group.on_change("active", update_data_table_content_and_graph)
 
     # ------------------------------ 4. Show all ------------------------------ #
 
     tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_width')
     layout_overall = layout([
-        [date_picker, select, select_algorithm],
+        [date_picker, select_time, select_algorithm],
         [div],
         tabs
     ], sizing_mode='scale_width')
