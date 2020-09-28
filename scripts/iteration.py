@@ -1,9 +1,9 @@
-from multiple.scripts.data_generation import *
-from multiple.scripts.household_scheduling import *
-from multiple.scripts.drsp_pricing import *
-from multiple.scripts.input_parameter import *
-from multiple.scripts.output_results import write_results
-from multiple.scripts.cfunctions import *
+from scripts.data_generation import *
+from scripts.household_scheduling import *
+from scripts.drsp_pricing import *
+from scripts.input_parameter import *
+from scripts.output_results import write_results
+from scripts.cfunctions import *
 
 
 def update_data(r_dict, itr, k1_alg, d, k0):
@@ -30,7 +30,7 @@ def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, pen
     return area_dict
 
 
-def iteration():
+def iteration(num_households, num_tasks, new_data):
 
     def extract_pricing_results(k1_algorithm_scheduling, k1_algorithm_fw, results):
         prices = results[k1_algorithm_scheduling][k0_prices]
@@ -52,14 +52,15 @@ def iteration():
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
-    str_summary = "{0} households, {1} tasks per household".format(no_households, no_tasks)
+    str_summary = "{0} households, {1} tasks per household, using {2} cost function"\
+        .format(num_households, num_tasks, cost_type)
     print(str_summary)
     print("---------- Experiments begin! ----------")
 
     # 0.1 - generation household data and the total preferred demand profile
-    if new_households:
+    if new_data:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
-                                           no_households, no_tasks, care_f_weight, care_f_max, max_demand_multiplier,
+                                           num_households, num_tasks, care_f_weight, care_f_max, max_demand_multiplier,
                                            file_probability, file_demand_list)
         print("Household data created...")
     else:
@@ -129,7 +130,7 @@ def iteration():
 
             # 1.1.1 - reschedule a household
             rescheduling_results \
-                = household_scheduling_subproblem(no_intervals, no_tasks, no_periods, no_intervals_periods,
+                = household_scheduling_subproblem(no_intervals, num_tasks, no_periods, no_intervals_periods,
                                                   household, care_f_weight, care_f_max, area[k0_prices], itr,
                                                   model_file, model_type,
                                                   solver_type, solver_choice, var_selection, val_choice)
@@ -213,5 +214,3 @@ def iteration():
     # -------------------- 4. process results -------------------- #
     output_date_time_folder = write_results(area, output_folder, str_summary)
 
-
-iteration()

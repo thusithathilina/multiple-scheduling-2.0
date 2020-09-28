@@ -6,8 +6,8 @@ import numpy as np
 from numpy import sqrt, pi, random
 import os
 from more_itertools import grouper
-from multiple.scripts.input_parameter import *
-from multiple.scripts.cfunctions import average
+from scripts.input_parameter import *
+from scripts.cfunctions import average
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):

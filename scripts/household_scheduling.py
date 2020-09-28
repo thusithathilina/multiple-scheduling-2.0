@@ -1,7 +1,7 @@
 import timeit
 from minizinc import *
 import random as r
-from multiple.scripts.input_parameter import *
+from scripts.input_parameter import *
 
 
 def data_preprocessing(num_intervals, num_tasks, demands, prices_day, earliest_starts, latest_ends, durations,
@@ -141,6 +141,7 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
         obj += run_costs[task_id][a_start]
 
     elapsed = timeit.default_timer() - start_time
+    obj = round(obj, 2)
 
     return actual_starts, household_profile, obj, elapsed
 

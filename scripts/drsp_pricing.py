@@ -1,6 +1,6 @@
 from bisect import bisect_left
-from multiple.scripts.cfunctions import find_ge, find_le
-from multiple.scripts.input_parameter import *
+from scripts.cfunctions import find_ge, find_le
+from scripts.input_parameter import *
 
 
 def pricing_cost(demand_profile, pricing_table, cost_function_type):
@@ -30,7 +30,6 @@ def pricing_cost(demand_profile, pricing_table, cost_function_type):
 
 def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, penalty_pre, penalty_new,
                       cost_type, prices_pre, cost_pre):
-    demand_profile_fw = demand_profile_new[:]
     cost = cost_pre
     penalty = penalty_pre
     change_of_penalty = penalty_new - penalty_pre
@@ -38,6 +37,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
 
     # print("before fw", price_day)
     demand_profile_changed = [d_n - d_p for d_n, d_p in zip(demand_profile_new, demand_profile_pre)]
+    demand_profile_fw = demand_profile_pre[:]
     demand_profile_fw_pre = demand_profile_pre[:]
     best_step_size = 0
     gradient = -999
@@ -62,14 +62,12 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
         demand_profile_fw_temp = [d_p + (d_n - d_p) * temp_step_size for d_p, d_n in
                                   zip(demand_profile_fw_pre, demand_profile_new)]
         price_fw, cost_fw = pricing_cost(demand_profile_fw_temp, pricing_table, cost_type)
+
         # todo - check calculation of the gradient
         gradient = sum([d_c * p_fw for d_c, p_fw in
                         zip(demand_profile_changed, price_fw)]) + change_of_penalty
 
         demand_profile_fw_pre = demand_profile_fw_temp[:]
-
-        # print(gradient)
-        # print(gradient < 0 and temp_step_size < 1)
 
         if gradient < 0 and best_step_size < 1:
             best_step_size += temp_step_size

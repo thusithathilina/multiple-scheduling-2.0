@@ -3,7 +3,7 @@ from datetime import date, datetime
 from shutil import copy
 import pickle
 import pandas as pd
-from multiple.scripts.input_parameter import *
+from scripts.input_parameter import *
 
 
 def write_results(area_res, out_folder, str_sum):
