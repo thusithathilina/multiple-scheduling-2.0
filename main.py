@@ -3,16 +3,19 @@ import pandas as pd
 from bokeh.io import curdoc
 from bokeh.layouts import layout
 from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select, Div, \
-    DataTable, TableColumn, NumberFormatter, Panel, Tabs
+    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Button, HoverTool
+from bokeh.plotting import figure
 from os import walk, path
 from pathlib import Path
 from scripts.input_parameter import *
+from scripts.iteration import *
 from datetime import date
 
 
 exp_date = "2020-09-28"
 exp_time = "03-57-48-505121"
-results_folder = "results/"
+parent_folder = "multiple/"
+results_folder = parent_folder + "results/"
 
 
 def view_results(date_folder, time_folder):
@@ -64,35 +67,95 @@ def view_results(date_folder, time_folder):
     others_combined_dict = dict()
     load_data(date_folder, time_folder)
 
-    # ---------- 0. initialise web widgets ----------
+    # ------------------------------ 1. Data Tab ------------------------------ #
 
-    # 0.1 - date picker: choose the date of the results
+    # ---------- 1.1. initialise web widgets ----------
+
+    # 1.1.1 - date picker: choose the date of the results
     date_default = date_folder
     date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
-    date_min = date_options[0]
+    date_min = "2020-09-27"
     date_max = str(date.today())
     date_picker = DatePicker(title='Select date:', value=date_default, min_date=date_min, max_date=date_max)
 
-    # 0.2 - select: choose the time of the results
+    # 1.1.2 - select: choose the time of the results
     select = Select(title="Select time:", value=time_folder)
 
-    # 0.3 - select: choose the algorithm
+    # 1.1.3 - select: choose the algorithm
     selected_algorithm = k1_optimal_fw
     selected_algorithm_options = [k1_optimal_fw, k1_heuristic_fw]
     select_algorithm = Select(title="Select algorithm:", value=selected_algorithm, options=selected_algorithm_options)
 
-    # 0.4 - div: show the experiment summary
+    # 1.1.4 - div: show the experiment summary
     div = Div()
 
-    # 0.5 - radio buttons: choose the date source
+    # 1.1.5 - radio buttons: choose the date source
     LABELS = ["Demand Profile", "Price Profile", "Others"]
     radio_button_group = RadioButtonGroup(labels=LABELS, active=2)
 
-    # 0.6 - data table: show numbers
+    # 1.1.6 - data table: show numbers
     source = ColumnDataSource()
     data_table = DataTable(source=source, index_position=None)
 
-    # ---------- 1. event functions for widgets ----------
+    # ---------- 1.2. design layout ----------
+
+    layout_data = layout([
+        [radio_button_group],
+        [data_table]
+
+    ], sizing_mode='scale_width')
+    tab_data = Panel(child=layout_data, title='Data')
+
+    # ------------------------------ 2. Graph Tab ------------------------------ #
+
+    # 2.1. data source
+    k1_algorithm = select_algorithm.value
+    source_combined = ColumnDataSource(others_combined_dict[k1_algorithm])
+    hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand') ])
+
+    def draw_bar_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
+        p = figure(title=title, background_fill_color="#fafafa",
+                   x_axis_label=x_label, y_axis_label=y_label)
+        p.vbar(source=source_data, x=x_data, top=top_data, width=1,
+               line_color="white", fill_color=colour, )
+        p.grid.grid_line_color = "white"
+        p.add_tools(hover)
+        return p
+
+    # 2.2. cost bar chart
+    p_cost = draw_bar_chart(source_data=source_combined, title='Cost per Iteration',
+                            x_label='Iteration', y_label='Cost (cent)', colour='orange',
+                            x_data='index', top_data=k0_cost)
+
+    # 2.3 max demand bar chart
+    p_demand_max = draw_bar_chart(source_data=source_combined, title='Max demand per Iteration',
+                                  x_label='Iteration', y_label='Demand (KW)', colour='green',
+                                  x_data='index', top_data=k0_demand_max)
+
+    # 2.2 demand heatmap
+
+    # 2.3 price heatmap
+
+    layout_graph = layout([[p_cost, p_demand_max]], sizing_mode='scale_both')
+    tab_graph = Panel(child=layout_graph, title='Graph')
+
+    # ------------------------------ 3. Input Tab ------------------------------ #
+
+    def run_experiment():
+        iteration(100, no_tasks, True)
+
+    # input the parameters for running the experiments
+
+    # a run button
+
+    # a text window for streaming the results from the python program (not sure if I need that)
+    button = Button(label="Run", button_type="primary")
+    button.on_click(run_experiment)
+
+    layout_exp = layout([button], sizing_mode='scale_width')
+    tab_exp = Panel(child=layout_exp, title='Experiment')
+
+    # ------------------------------ 4. event functions for widgets ------------------------------ #
 
     def update_select_options(attr, old, new):
         select_opt = [dirs for root, dirs, _ in walk(results_folder + "{}".format(new)) if dirs != []][0]
@@ -113,6 +176,7 @@ def view_results(date_folder, time_folder):
         elif new == 2:  # others
             # display_keys = list(source.data.keys())
             source.data = others_combined_dict[select_algorithm.value]
+            source_combined.data = others_combined_dict[select_algorithm.value]
         # print(source.data)
         columns_keys = source.data.keys()
         table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
@@ -120,6 +184,7 @@ def view_results(date_folder, time_folder):
                          for i in columns_keys]
         data_table.columns = table_columns
         data_table.update()
+        p_cost.update()
 
     def update_div_content(attr, d_f, t_f):
         # d_f = date_picker.value
@@ -145,28 +210,23 @@ def view_results(date_folder, time_folder):
     update_data_table_content(None, None, 2)
     update_div_content(None, date_folder, time_folder)
 
-    # ---------- 3. assign event functions to widgets ----------
+    # ------------------------------ 5. assign event functions to widgets ------------------------------ #
 
     date_picker.on_change("value", update_select_options)
     select.on_change("value", update_data_table_source)
     select_algorithm.on_change("value", switch_algorithm)
     radio_button_group.on_change("active", update_data_table_content)
 
-    # ---------- 4. design layout ----------
+    # ------------------------------ 4. Show all ------------------------------ #
 
-    l = layout([
+    tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_width')
+    layout_overall = layout([
         [date_picker, select, select_algorithm],
         [div],
-        [radio_button_group],
-        [data_table]
-
+        tabs
     ], sizing_mode='scale_width')
 
-    tab1 = Panel(child=l, title='Summary Table')
-    tabs = Tabs(tabs=[tab1])
-
-    # show graphs
-    curdoc().add_root(tabs)
+    curdoc().add_root(layout_overall)
 
 
 view_results(exp_date, exp_time)

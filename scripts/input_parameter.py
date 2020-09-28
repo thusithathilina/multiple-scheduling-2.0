@@ -25,12 +25,18 @@ model_type = "pre"
 solver_type = "cp"
 
 # external file related parameters
-file_cp_pre = 'models/Household-cp-pre.mzn'
-file_cp_ini = 'models/Household-cp.mzn'
-file_pricing_table = 'data/pricing_table_0.csv'
-file_household_area_folder = 'data/'
-file_probability = 'data/probability.csv'
-file_demand_list = 'data/demands_list.csv'
+# from os import getcwd
+# parent_folder = getcwd() + "/"
+# if "multiple" not in folder_current:
+#     parent_folder += "multiple/"
+parent_folder = ""
+file_cp_pre = parent_folder + 'models/Household-cp-pre.mzn'
+file_cp_ini = parent_folder + 'models/Household-cp.mzn'
+file_pricing_table = parent_folder + 'data/pricing_table_0.csv'
+file_household_area_folder = parent_folder + 'data/'
+file_probability = parent_folder + 'data/probability.csv'
+file_demand_list = parent_folder + 'data/demands_list.csv'
+output_folder = parent_folder + "results/"
 
 # demand related parameters
 # k0_starts = "start_times"
@@ -58,6 +64,4 @@ k1_heuristic_scheduling = "heuristic"
 k1_optimal_fw = "optimal_fw"
 k1_heuristic_fw = "heuristic_fw"
 
-# result related parameters
-output_folder = "results/"
 
