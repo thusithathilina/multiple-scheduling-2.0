@@ -75,7 +75,7 @@ def view_results(date_folder, time_folder):
     # ------------------------------ 1. Data Tab ------------------------------ #
     # 1.1. initialise web widgets
     # 1.1.1 - date picker: choose the date of the results
-    date_default = str(date.today())
+    date_default = str(date.today()) if date_folder is None else date_folder
     # date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
     date_min = "2020-09-27"
     date_max = date_default
@@ -132,8 +132,8 @@ def view_results(date_folder, time_folder):
                                   x_label='Iteration', y_label='Demand (KW)', colour='green',
                                   x_data='index', top_data=k0_demand_max)
 
-    def draw_demand_price_heatmap(dtype, x_loc, colors):
-        data = demands_prices_fw_dict[dtype][k1_algorithm]
+    def draw_demand_price_heatmap(dtype, x_loc, colors, k1_alg):
+        data = demands_prices_fw_dict[dtype][k1_alg]
 
         x_periods = list(data.columns)
         y_iterations = [str(x) for x in (list(data.index))]
@@ -169,10 +169,10 @@ def view_results(date_folder, time_folder):
     heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
 
     data_type = k0_demand
-    heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours)
+    heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
 
     data_type = k0_prices
-    heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours)
+    heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
 
     # 2.4 graph tab layout
 
@@ -226,6 +226,12 @@ def view_results(date_folder, time_folder):
         source_combined.data = others_combined_dict[select_algorithm.value]
         p_cost.update()
 
+        # heatmap_demand.rect.source = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        # heatmap_demand.update()
+        #
+        # heatmap_price.rect.source = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        # heatmap_price.update()
+
     def update_div_content(attr, d_f, t_f):
         # d_f = date_picker.value
         # t_f = select.value
@@ -246,9 +252,9 @@ def view_results(date_folder, time_folder):
         active_radio_button = radio_button_group.active
         update_data_table_content_and_graph(None, None, active_radio_button)
 
-    update_select_options(None, None, date_folder)
+    update_select_options(None, None, date_picker.value)
     update_data_table_content_and_graph(None, None, 0)
-    update_div_content(None, date_folder, select_time.value)
+    update_div_content(None, date_picker.value, select_time.value)
 
     # ------------------------------ 5. assign event functions to widgets ------------------------------ #
     date_picker.on_change("value", update_select_options)
