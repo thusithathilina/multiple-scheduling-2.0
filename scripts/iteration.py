@@ -52,7 +52,7 @@ def iteration(num_households, num_tasks, new_data):
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
-    str_summary = "{0} households, {1} tasks per household, using {2} cost function"\
+    str_summary = "{0} households, {1} tasks per household, {2} cost function"\
         .format(num_households, num_tasks, cost_type)
     print(str_summary)
     print("---------- Experiments begin! ----------")

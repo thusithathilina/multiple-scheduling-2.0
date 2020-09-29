@@ -1,9 +1,10 @@
 import pickle
 import pandas as pd
 from bokeh.io import curdoc
-from bokeh.layouts import layout
+from bokeh.layouts import layout, column, row, grid
 from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select, Div, \
-    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Button, HoverTool
+    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Button, HoverTool, LinearColorMapper, ColorBar, BasicTicker, \
+    PrintfTickFormatter
 from bokeh.plotting import figure
 from os import walk, path
 from pathlib import Path
@@ -12,9 +13,9 @@ from scripts.iteration import *
 from datetime import date
 
 
-exp_date = None
+exp_date = "2020-09-29"
 exp_time = None
-parent_folder = "multiple/"
+# parent_folder = "multiple/"
 # parent_folder = ""
 results_folder = parent_folder + "results/"
 
@@ -72,12 +73,10 @@ def view_results(date_folder, time_folder):
     load_data(date_folder, time_folder)
 
     # ------------------------------ 1. Data Tab ------------------------------ #
-
-    # ---------- 1.1. initialise web widgets ----------
-
+    # 1.1. initialise web widgets
     # 1.1.1 - date picker: choose the date of the results
     date_default = str(date.today())
-    date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
+    # date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
     date_min = "2020-09-27"
     date_max = date_default
     date_picker = DatePicker(title='Select date:', value=date_default, min_date=date_min, max_date=date_max)
@@ -100,8 +99,7 @@ def view_results(date_folder, time_folder):
     source = ColumnDataSource()
     data_table = DataTable(source=source, index_position=None)
 
-    # ---------- 1.2. design layout ----------
-
+    # 1.2. design layout
     layout_data = layout([
         [radio_button_group],
         [data_table]
@@ -110,11 +108,10 @@ def view_results(date_folder, time_folder):
     tab_data = Panel(child=layout_data, title='Data')
 
     # ------------------------------ 2. Graph Tab ------------------------------ #
-
     # 2.1. data source
     k1_algorithm = select_algorithm.value
     source_combined = ColumnDataSource(others_combined_dict[k1_algorithm])
-    hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand') ])
+    hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
 
     def draw_bar_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
         p = figure(title=title, background_fill_color="#fafafa",
@@ -135,17 +132,57 @@ def view_results(date_folder, time_folder):
                                   x_label='Iteration', y_label='Demand (KW)', colour='green',
                                   x_data='index', top_data=k0_demand_max)
 
-    # 2.2 demand heatmap
+    def draw_demand_price_heatmap(dtype, x_loc, colors):
+        data = demands_prices_fw_dict[dtype][k1_algorithm]
 
-    # 2.3 price heatmap
+        x_periods = list(data.columns)
+        y_iterations = [str(x) for x in (list(data.index))]
+        data = data.iloc[::-1].stack().reset_index()
+        data.columns = ['Iteration', 'Period', dtype]
+        tooltips = [('Iteration', '@Iteration'), ('Period', '@Period'), ('Value', '@' + dtype)]
 
-    layout_graph = layout([[p_cost, p_demand_max]], sizing_mode='scale_both')
+        mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
+        p = figure(title='Demand Heatmap', x_range=x_periods, y_range=y_iterations,
+                         x_axis_location=x_loc, tooltips=tooltips)
+
+        p.grid.grid_line_color = None
+        p.axis.axis_line_color = None
+        p.axis.major_tick_line_color = None
+        p.axis.major_label_text_font_size = "7px"
+        p.axis.major_label_standoff = 0
+        p.xaxis.major_label_orientation = pi / 3
+
+        p.rect(x="Period", y="Iteration", width=1, height=1,
+               source=data,
+               fill_color={'field': dtype, 'transform': mapper},
+               line_color=None)
+        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="7px",
+                             ticker=BasicTicker(desired_num_ticks=len(colors)),
+                             formatter=PrintfTickFormatter(format="%d%%"),
+                             label_standoff=6, border_line_color=None, location=(0, 0))
+        p.add_layout(color_bar, 'right')
+
+        return p
+
+    # 2.2 demand heatmap and price heatmap
+    x_location = "above"
+    heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
+
+    data_type = k0_demand
+    heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours)
+
+    data_type = k0_prices
+    heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours)
+
+    # 2.4 graph tab layout
+
+    layout_graph = layout([[p_cost, heatmap_demand], [p_demand_max, heatmap_price]], sizing_mode='scale_both')
     tab_graph = Panel(child=layout_graph, title='Graph')
 
     # ------------------------------ 3. Input Tab ------------------------------ #
-
     def run_experiment():
-        iteration(100, no_tasks, True)
+        # iteration(100, no_tasks, True)
+        print("TBC")
 
     # input the parameters for running the experiments
 
@@ -159,7 +196,6 @@ def view_results(date_folder, time_folder):
     tab_exp = Panel(child=layout_exp, title='Experiment')
 
     # ------------------------------ 4. event functions for widgets ------------------------------ #
-
     def update_select_options(attr, old, new):
         select_opt = [dirs for root, dirs, _ in walk(results_folder + "{}".format(new)) if dirs != []][0]
         select_time.options = select_opt
@@ -210,23 +246,20 @@ def view_results(date_folder, time_folder):
         active_radio_button = radio_button_group.active
         update_data_table_content_and_graph(None, None, active_radio_button)
 
-    update_select_options(None, None, date_picker.value)
-    update_data_table_content_and_graph(None, None, 2)
-    update_div_content(None, date_picker.value, select_time.value)
+    update_select_options(None, None, date_folder)
+    update_data_table_content_and_graph(None, None, 0)
+    update_div_content(None, date_folder, select_time.value)
 
     # ------------------------------ 5. assign event functions to widgets ------------------------------ #
-
     date_picker.on_change("value", update_select_options)
     select_time.on_change("value", update_data_table_source)
     select_algorithm.on_change("value", switch_algorithm)
     radio_button_group.on_change("active", update_data_table_content_and_graph)
 
     # ------------------------------ 4. Show all ------------------------------ #
-
-    tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_width')
+    tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_both')
     layout_overall = layout([
-        [date_picker, select_time, select_algorithm],
-        [div],
+        [date_picker, select_time, select_algorithm, div],
         tabs
     ], sizing_mode='scale_width')
 
