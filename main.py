@@ -124,7 +124,7 @@ def view_results(date_folder, time_folder):
     source_combined = ColumnDataSource()
     hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
 
-    def draw_bar_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
+    def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
         p = figure(title=title, background_fill_color="#fafafa", plot_height=350,
                    x_axis_label=x_label, y_axis_label=y_label)
         p.line(x_data, top_data, source=source_data)
@@ -133,12 +133,12 @@ def view_results(date_folder, time_folder):
         return p
 
     # 2.2. cost bar chart
-    p_cost = draw_bar_chart(source_data=source_combined, title='Cost per Iteration',
+    p_cost = draw_line_chart(source_data=source_combined, title='Cost per Iteration',
                             x_label='Iteration', y_label='Cost (cent)', colour='orange',
                             x_data='index', top_data=k0_cost)
 
     # 2.3 max demand bar chart
-    p_demand_max = draw_bar_chart(source_data=source_combined, title='Max demand per Iteration',
+    p_demand_max = draw_line_chart(source_data=source_combined, title='Max demand per Iteration',
                                   x_label='Iteration', y_label='Demand (KW)', colour='green',
                                   x_data='index', top_data=k0_demand_max)
 
@@ -163,31 +163,31 @@ def view_results(date_folder, time_folder):
         p.axis.major_label_standoff = 0
         p.xaxis.major_label_orientation = pi / 3
 
-        p.rect(x="Period", y="Iteration", width=1, height=1,
-               source=source_heatmap,
-               fill_color={'field': dtype, 'transform': mapper},
-               line_color=None)
+        chart = p.rect(x="Period", y="Iteration", width=1, height=1,
+                         source=source_heatmap,
+                         fill_color={'field': dtype, 'transform': mapper},
+                         line_color=None)
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="7px",
                              ticker=BasicTicker(desired_num_ticks=len(colors)),
                              formatter=PrintfTickFormatter(format="%d%%"),
                              label_standoff=6, border_line_color=None, location=(0, 0))
         p.add_layout(color_bar, 'right')
 
-        return p, source_heatmap
+        return p, source_heatmap, chart, color_bar, mapper
 
     # 2.2 demand heatmap and price heatmap
     x_location = "above"
     heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
 
-    data_type = k0_demand
-    heatmap_demand, source_heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
+    plot_heatmap_demand, source_heatmap_demand, chart_heatmap_demand, color_bar_demand, mapper_demand \
+        = draw_demand_price_heatmap(k0_demand, x_location, heatmap_colours, k1_algorithm)
 
-    data_type = k0_prices
-    heatmap_price, source_heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
+    plot_heatmap_price, source_heatmap_price, chart_heatmap_price, color_bar_prices, mapper_price \
+        = draw_demand_price_heatmap(k0_prices, x_location, heatmap_colours, k1_algorithm)
 
     # 2.4 graph tab layout
-    row1 = row(p_cost, heatmap_demand)
-    row2 = row(p_demand_max, heatmap_price)
+    row1 = row(p_cost, plot_heatmap_demand)
+    row2 = row(p_demand_max, plot_heatmap_price)
     # todo - stretch is not working yet. want to make it responsive
     layout_graph = layout(column([row1, row2]), sizing_mode='stretch_both')
     tab_graph = Panel(child=layout_graph, title='Graph')
@@ -240,29 +240,35 @@ def view_results(date_folder, time_folder):
         p_cost.update()
         p_demand_max.update()
 
-        # data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
-        # data = data.iloc[::-1].stack().reset_index()
-        # data.columns = ['Iteration', 'Period', k0_demand]
-        # source_heatmap_demand.data = data
-        # mapper = LinearColorMapper(palette=heatmap_colours, low=data[k0_demand].min(), high=data[k0_demand].max())
-        # heatmap_demand.rect(x="Period", y="Iteration", width=1, height=1,
-        #                     source=source_heatmap_demand,
-        #                     fill_color={'field': k0_demand, 'transform': mapper},
-        #                     line_color=None)
-        #
-        # data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        # data = data.iloc[::-1].stack().reset_index()
-        # data.columns = ['Iteration', 'Period', k0_prices]
-        # source_heatmap_demand.data = data
-        # source_heatmap_price.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        # mapper = LinearColorMapper(palette=heatmap_colours, low=data[k0_prices].min(), high=data[k0_prices].max())
-        # heatmap_price.rect(x="Period", y="Iteration", width=1, height=1,
-        #                    source=source_heatmap_price,
-        #                    fill_color={'field': k0_prices, 'transform': mapper},
-        #                    line_color=None)
+        data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        y_iterations = [str(x) for x in (list(data.index))]
+        plot_heatmap_demand.y_range.factors = y_iterations
 
-        # heatmap_demand.update()
-        # heatmap_price.update()
+        data = data.iloc[::-1].stack().reset_index()
+        data.columns = ['Iteration', 'Period', k0_demand]
+        source_heatmap_demand.data = data
+
+        mapper_demand.low = data[k0_demand].min()
+        mapper_demand.high = data[k0_demand].max()
+
+        chart_heatmap_demand.update()
+        color_bar_demand.update()
+        # plot_heatmap_demand.update()
+
+        # mapper = LinearColorMapper(palette=heatmap_colours, low=data[k0_demand].min(), high=data[k0_demand].max())
+        # chart_heatmap_demand.fill_color = {'field': k0_demand, 'transform': mapper}
+        # color_bar_demand.color_mapper = mapper
+        # color_bar_demand.update()
+
+        data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        plot_heatmap_price.y_range.factors = y_iterations
+        data = data.iloc[::-1].stack().reset_index()
+        data.columns = ['Iteration', 'Period', k0_prices]
+        source_heatmap_price.data = data
+
+        chart_heatmap_price.update()
+        color_bar_prices.update()
+        # plot_heatmap_price.update()
 
     def update_div_content(attr, d_f, t_f):
         # d_f = date_picker.value
