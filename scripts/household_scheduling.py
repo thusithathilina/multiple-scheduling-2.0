@@ -49,7 +49,8 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
             if l in prec_or_succ_list1:
                 succ_or_prec_indices = [i2 for i2, k in enumerate(prec_or_succ_list1) if k == l]
                 succ_or_prec = [succ_prec_list2[i2] for i2 in succ_or_prec_indices]
-                succ_succ_or_prec_prec = retrieve_successors_or_precedents(succ_or_prec, prec_or_succ_list1, succ_prec_list2)
+                succ_succ_or_prec_prec \
+                    = retrieve_successors_or_precedents(succ_or_prec, prec_or_succ_list1, succ_prec_list2)
                 list_r.extend(succ_succ_or_prec_prec)
             else:
                 list_r.append(l)

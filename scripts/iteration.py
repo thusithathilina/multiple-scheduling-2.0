@@ -30,7 +30,7 @@ def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, pen
     return area_dict
 
 
-def iteration(num_households, num_tasks, new_data):
+def iteration(num_households, num_tasks, new_data, cost_type):
 
     def extract_pricing_results(k1_algorithm_scheduling, k1_algorithm_fw, results):
         prices = results[k1_algorithm_scheduling][k0_prices]
@@ -66,6 +66,7 @@ def iteration(num_households, num_tasks, new_data):
     else:
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
+    area[k0_cost_type] = cost_type
 
     # 0.2 - read the model file, solver choice and the pricing table (price levels and the demand table)
     demand_level_scale = area[k0_demand_max][k1_optimal_scheduling][0] * pricing_table_weight
@@ -179,7 +180,6 @@ def iteration(num_households, num_tasks, new_data):
         heuristic_prices, heuristic_cost, heuristic_demands_fw, heuristic_prices_fw, heuristic_cost_fw, \
         heuristic_penalty_fw, heuristic_step_fw \
             = extract_pricing_results(k1_heuristic_scheduling, k1_heuristic_fw, pricing_results_fw)
-        # todo - handle if step == 0
         area = update_area_data(area, itr, k1_heuristic_scheduling,
                                 None, heuristic_prices,
                                 None, None, None, None, 0)
@@ -192,7 +192,6 @@ def iteration(num_households, num_tasks, new_data):
         optimal_prices, optimal_cost, optimal_demand_fw, optimal_prices_fw, optimal_cost_fw, \
         optimal_penalty_fw, optimal_step_fw \
             = extract_pricing_results(k1_optimal_scheduling, k1_optimal_fw, pricing_results_fw)
-        # todo - handle if step == 0
         area = update_area_data(area, itr, k1_optimal_scheduling,
                                 None, optimal_prices,
                                 None, None, None, None, None)

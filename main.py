@@ -78,7 +78,7 @@ def view_results(date_folder, time_folder):
     date_default = str(date.today()) if date_folder is None else date_folder
     # date_options = [dirs for root, dirs, _ in walk(results_folder) if dirs != []][0]
     date_min = "2020-09-27"
-    date_max = date_default
+    date_max = str(date.today())
     date_picker = DatePicker(title='Select date:', value=date_default, min_date=date_min, max_date=date_max)
 
     # 1.1.2 - select: choose the time of the results
@@ -114,11 +114,14 @@ def view_results(date_folder, time_folder):
     hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
 
     def draw_bar_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
-        p = figure(title=title, background_fill_color="#fafafa",
+        p = figure(title=title, background_fill_color="#fafafa", plot_height=350,
                    x_axis_label=x_label, y_axis_label=y_label)
-        p.vbar(source=source_data, x=x_data, top=top_data, width=1,
-               line_color="white", fill_color=colour, )
-        p.grid.grid_line_color = "white"
+        # p.line('date', 'close', source=source)
+        p.line(x_data, top_data, source=source)
+        p.circle(x_data, top_data, size=5, source=source, selection_color="orange")
+        # p.vbar(source=source_data, x=x_data, top=top_data, width=1,
+        #        line_color="white", fill_color=colour, )
+        # p.grid.grid_line_color = "white"
         p.add_tools(hover)
         return p
 
@@ -143,7 +146,7 @@ def view_results(date_folder, time_folder):
 
         mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
         p = figure(title='Demand Heatmap', x_range=x_periods, y_range=y_iterations,
-                         x_axis_location=x_loc, tooltips=tooltips)
+                         x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
         p.grid.grid_line_color = None
         p.axis.axis_line_color = None
@@ -175,8 +178,10 @@ def view_results(date_folder, time_folder):
     heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
 
     # 2.4 graph tab layout
-
-    layout_graph = layout([[p_cost, heatmap_demand], [p_demand_max, heatmap_price]], sizing_mode='scale_both')
+    row1 = row(p_cost, heatmap_demand)
+    row2 = row(p_demand_max, heatmap_price)
+    # todo - stretch is not working yet. want to make it responsive
+    layout_graph = layout(column([row1, row2]), sizing_mode='stretch_both')
     tab_graph = Panel(child=layout_graph, title='Graph')
 
     # ------------------------------ 3. Input Tab ------------------------------ #

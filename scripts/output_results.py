@@ -4,6 +4,7 @@ from shutil import copy
 import pickle
 import pandas as pd
 from scripts.input_parameter import *
+from json import dumps
 
 
 def write_results(area_res, out_folder, str_sum):

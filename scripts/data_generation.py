@@ -114,7 +114,6 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             if l in precedors:
                 list2 = precedors[l]
                 retrieved_list = retrieve_precedes(list2)
-                # todo - add the one with the latest finish? earliest start time?
                 list3.extend(retrieved_list)
             else:
                 list3.append(l)
@@ -200,6 +199,8 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
     area = dict()
+    area[k0_tasks_no] = num_tasks
+    area[k0_households_no] = num_households
 
     def initialise_area_trackers(k0_key, k1_key):
         if k0_key not in area:

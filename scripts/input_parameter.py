@@ -14,8 +14,8 @@ care_f_weight = 10
 
 # pricing related parameters
 pricing_table_weight = 1.0
-cost_type = "linear"
-# cost_type = "piece-wise"
+# cost_function_type = "linear"
+cost_function_type = "piece-wise"
 zero_digit = 2
 
 # solver related parameters
@@ -39,6 +39,9 @@ file_demand_list = parent_folder + 'data/demands_list.csv'
 output_folder = parent_folder + "results/"
 
 # demand related parameters
+k0_households_no = "no_households"
+k0_tasks_no = "no_tasks"
+k0_cost_type = "cost_function_type"
 # k0_starts = "start_times"
 k0_demand = "demands"
 k0_demand_max = "max_demand"

@@ -3,7 +3,7 @@ from scripts.cfunctions import find_ge, find_le
 from scripts.input_parameter import *
 
 
-def pricing_cost(demand_profile, pricing_table, cost_function_type):
+def pricing_cost(demand_profile, pricing_table, cost_function):
     price_day = []
     cost = 0
     price_levels = pricing_table[k0_price_levels]
@@ -17,7 +17,7 @@ def pricing_cost(demand_profile, pricing_table, cost_function_type):
             price = price_levels[-1]
         price_day.append(price)
 
-        if "piece-wise" in cost_function_type and level > 0:
+        if "piece-wise" in cost_function and level > 0:
             cost += demand_level[0] * price_levels[0]
             cost += (demand_period - demand_level[level - 1]) * price
             cost += sum([(demand_level[i] - demand_level[i - 1]) * price_levels[i] for i in range(1, level)])
@@ -63,7 +63,6 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
                                   zip(demand_profile_fw_pre, demand_profile_new)]
         price_fw, cost_fw = pricing_cost(demand_profile_fw_temp, pricing_table, cost_type)
 
-        # todo - check calculation of the gradient
         gradient = sum([d_c * p_fw for d_c, p_fw in
                         zip(demand_profile_changed, price_fw)]) + change_of_penalty
 
@@ -101,7 +100,7 @@ def save_results(results, k1_algorithm_scheduling, k1_algorithm_fw, prices, cost
     return results
 
 
-def pricing_master_problem(iteration, pricing_table, area, cost_function_type):
+def pricing_master_problem(iteration, pricing_table, area, cost_function):
     pricing_results = dict()
 
     def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
@@ -110,7 +109,7 @@ def pricing_master_problem(iteration, pricing_table, area, cost_function_type):
         penalty_new = area[k0_penalty][k1_algorithm_scheduling][iteration]
 
         # calculate the prices and the cost of the new demand profile
-        prices, cost = pricing_cost(demands_new, pricing_table, cost_type)
+        prices, cost = pricing_cost(demands_new, pricing_table, cost_function)
 
         if iteration > 0:
             demands_fw_pre = area[k0_demand][k1_algorithm_fw][iteration - 1]
