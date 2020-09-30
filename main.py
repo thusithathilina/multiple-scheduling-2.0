@@ -12,8 +12,8 @@ from scripts.iteration import *
 from datetime import date
 
 
-exp_date = "2020-09-29"
-exp_time = None
+exp_date = "2020-10-01"
+exp_time = "01-22-14-924742"
 # parent_folder = "multiple/"
 parent_folder = ""
 results_folder = parent_folder + "results/"
