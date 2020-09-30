@@ -196,6 +196,13 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         households[household_key]["max", "preferred"] = max(household_profile)
         households[household_key]["max", "limit"] = max_demand
 
+        households[household_key][k0_starts] = dict()
+        households[household_key][k0_starts][k1_heuristic_scheduling] = dict()
+        households[household_key][k0_starts][k1_optimal_scheduling] = dict()
+
+        households[household_key][k0_starts][k1_heuristic_scheduling][0] = preferred_starts
+        households[household_key][k0_starts][k1_optimal_scheduling][0] = preferred_starts
+
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
     area = dict()

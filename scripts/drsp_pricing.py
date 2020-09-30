@@ -130,6 +130,7 @@ def pricing_master_problem(iteration, pricing_table, area, cost_function):
 
         return prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step
 
+    # todo - the price to be hacked
     heuristic_prices, heuristic_cost, heuristic_demands_fw, heuristic_prices_fw, \
     heuristic_cost_fw, heuristic_penalty_fw, heuristic_step = procedure(k1_heuristic_scheduling, k1_heuristic_fw)
     pricing_results = save_results(pricing_results, k1_heuristic_scheduling, k1_heuristic_fw,

@@ -44,11 +44,12 @@ def iteration(num_households, num_tasks, new_data, cost_type):
         return prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw
 
     def extract_rescheduling_results(k1_algorithm_scheduling, results):
+        starts = results[k1_algorithm_scheduling][k0_starts]
         demands_new = results[k1_algorithm_scheduling][k0_demand]
         obj = results[k1_algorithm_scheduling][k0_obj]
         penalty = results[k1_algorithm_scheduling][k0_penalty]
         time = results[k1_algorithm_scheduling][k0_time]
-        return demands_new, obj, penalty, time
+        return starts, demands_new, obj, penalty, time
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
@@ -137,8 +138,9 @@ def iteration(num_households, num_tasks, new_data, cost_type):
                                                   solver_type, solver_choice, var_selection, val_choice)
 
             # 1.1.2 - heuristic: extract results and update the demand profiles, total objective value and the runtime
-            heuristic_demands_household, heuristic_obj_household, heuristic_penalty_household, heuristic_time_household \
-                = extract_rescheduling_results(k1_heuristic_scheduling, rescheduling_results)
+            heuristic_starts, heuristic_demands_household, heuristic_obj_household, heuristic_penalty_household, \
+            heuristic_time_household = extract_rescheduling_results(k1_heuristic_scheduling, rescheduling_results)
+            households[key][k0_starts][k1_heuristic_scheduling][itr] = heuristic_starts
             heuristic_demands_scheduling \
                 = [x + y for x, y in zip(heuristic_demands_household, heuristic_demands_scheduling)]
             heuristic_obj_area += heuristic_obj_household
@@ -146,8 +148,9 @@ def iteration(num_households, num_tasks, new_data, cost_type):
             total_time_scheduling_heuristic += heuristic_time_household
 
             # 1.1.2 - optimal: extract results and update the demand profiles, total objective value and the runtime
-            optimal_demands_household, optimal_obj_household, optimal_penalty_household, optimal_time_household \
-                = extract_rescheduling_results(k1_optimal_scheduling, rescheduling_results)
+            optimal_starts, optimal_demands_household, optimal_obj_household, optimal_penalty_household, \
+            optimal_time_household = extract_rescheduling_results(k1_optimal_scheduling, rescheduling_results)
+            households[key][k0_starts][k1_optimal_scheduling][itr] = optimal_starts
             optimal_demands_scheduling \
                 = [x + y for x, y in zip(optimal_demands_household, optimal_demands_scheduling)]
             optimal_obj_area += optimal_obj_household

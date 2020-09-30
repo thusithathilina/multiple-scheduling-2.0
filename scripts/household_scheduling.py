@@ -199,12 +199,13 @@ def household_optimal_solving \
     return actual_starts, optimal_demand_profile, obj, time
 
 
-def save_results(results, k1_algorithm_scheduling, demands_new, obj, penalty, time):
+def save_results(results, k1_algorithm_scheduling, return_dict):
     results[k1_algorithm_scheduling] = dict()
-    results[k1_algorithm_scheduling][k0_demand] = demands_new
-    results[k1_algorithm_scheduling][k0_obj] = obj
-    results[k1_algorithm_scheduling][k0_penalty] = penalty
-    results[k1_algorithm_scheduling][k0_time] = time
+    results[k1_algorithm_scheduling][k0_starts] = return_dict[k0_starts]
+    results[k1_algorithm_scheduling][k0_demand] = return_dict[k0_demand]
+    results[k1_algorithm_scheduling][k0_obj] = return_dict[k0_obj]
+    results[k1_algorithm_scheduling][k0_penalty] = return_dict[k0_penalty]
+    results[k1_algorithm_scheduling][k0_time] = return_dict[k0_time]
 
     return results
 
@@ -226,11 +227,13 @@ def household_scheduling_subproblem \
     succ_delays = household["succ_delays"]  # need to change this format when sending it to the solver
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
+    # todo for me - record household schedule per iteration
 
     def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
 
         # the FW prices at iteration k - 1
         prices = area_prices[k1_algorithm_fw][iteration - 1]
+        # todo - prices to be hacked
         if len(prices) == num_periods:
             prices = [int(p) for p in prices[:num_periods] for _ in range(num_intervals_periods)]
         else:
@@ -258,19 +261,13 @@ def household_scheduling_subproblem \
         penalty = sum([abs(pst - ast) * cf_weight * cf for pst, ast, cf
                        in zip(preferred_starts, actual_starts, care_factors)])
 
-        return actual_starts, demands_new, obj, penalty, runtime
+        return {k0_starts: actual_starts, k0_demand: demands_new, k0_obj: obj, k0_penalty: penalty, k0_time: runtime}
 
     rescheduling_results = dict()
-
-    heuristic_starts, heuristic_demands_new, heuristic_obj, heuristic_penalty, heuristic_runtime \
-        = procedure(k1_heuristic_scheduling, k1_heuristic_fw)
     rescheduling_results = save_results(rescheduling_results, k1_heuristic_scheduling,
-                                        heuristic_demands_new, heuristic_obj, heuristic_penalty, heuristic_runtime)
-
-    optimal_starts, optimal_demands_new, optimal_obj, optimal_penalty, optimal_runtime \
-        = procedure(k1_optimal_scheduling, k1_optimal_fw)
+                                        procedure(k1_heuristic_scheduling, k1_heuristic_fw))
     rescheduling_results = save_results(rescheduling_results, k1_optimal_scheduling,
-                                        optimal_demands_new, optimal_obj, optimal_penalty, optimal_runtime)
+                                        procedure(k1_optimal_scheduling, k1_optimal_fw))
 
     return rescheduling_results
 
