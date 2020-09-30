@@ -6,8 +6,8 @@ def experiment(num_households, num_tasks, new_data, cost_type, algorithms_labels
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
-    str_summary = "{0} households, {1} tasks per household, {2} cost function" \
-        .format(num_households, num_tasks, cost_type)
+    str_summary = "{0} households, {1} tasks per household, {2} cost function, {3} care factor weight" \
+        .format(num_households, num_tasks, cost_type, care_f_weight)
     print(str_summary)
     print("---------- Experiments begin! ----------")
 
@@ -20,7 +20,7 @@ def experiment(num_households, num_tasks, new_data, cost_type, algorithms_labels
     else:
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
-    area[k0_cost_type] = cost_type
+    area[k0_summary][k1_cost_type] = cost_type
 
     # 0.2 - read the model file, solver choice and the pricing table (price levels and the demand table)
     k1_temp = list(area[k0_demand_max].keys())[0]

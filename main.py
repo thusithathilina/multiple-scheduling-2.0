@@ -120,18 +120,15 @@ def view_results(date_folder, time_folder):
     # ------------------------------ 2. Graph Tab ------------------------------ #
     # 2.1. data source
     k1_algorithm = select_algorithm.value
-    source_combined = ColumnDataSource(others_combined_dict[k1_algorithm])
+    # source_combined = ColumnDataSource(others_combined_dict[k1_algorithm])
+    source_combined = ColumnDataSource()
     hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
 
     def draw_bar_chart(source_data, title, x_label, y_label, colour, x_data, top_data):
         p = figure(title=title, background_fill_color="#fafafa", plot_height=350,
                    x_axis_label=x_label, y_axis_label=y_label)
-        # p.line('date', 'close', source=source)
-        p.line(x_data, top_data, source=source)
+        p.line(x_data, top_data, source=source_data)
         p.circle(x_data, top_data, size=5, source=source, selection_color="orange")
-        # p.vbar(source=source_data, x=x_data, top=top_data, width=1,
-        #        line_color="white", fill_color=colour, )
-        # p.grid.grid_line_color = "white"
         p.add_tools(hover)
         return p
 
@@ -156,7 +153,7 @@ def view_results(date_folder, time_folder):
         tooltips = [('Iteration', '@Iteration'), ('Period', '@Period'), ('Value', '@' + dtype)]
 
         mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
-        p = figure(title='Demand Heatmap', x_range=x_periods, y_range=y_iterations,
+        p = figure(title='{} Heatmap'.format(dtype), x_range=x_periods, y_range=y_iterations,
                          x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
         p.grid.grid_line_color = None
@@ -241,9 +238,29 @@ def view_results(date_folder, time_folder):
 
         source_combined.data = others_combined_dict[select_algorithm.value]
         p_cost.update()
+        p_demand_max.update()
 
-        # source_heatmap_demand.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        # data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        # data = data.iloc[::-1].stack().reset_index()
+        # data.columns = ['Iteration', 'Period', k0_demand]
+        # source_heatmap_demand.data = data
+        # mapper = LinearColorMapper(palette=heatmap_colours, low=data[k0_demand].min(), high=data[k0_demand].max())
+        # heatmap_demand.rect(x="Period", y="Iteration", width=1, height=1,
+        #                     source=source_heatmap_demand,
+        #                     fill_color={'field': k0_demand, 'transform': mapper},
+        #                     line_color=None)
+        #
+        # data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        # data = data.iloc[::-1].stack().reset_index()
+        # data.columns = ['Iteration', 'Period', k0_prices]
+        # source_heatmap_demand.data = data
         # source_heatmap_price.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        # mapper = LinearColorMapper(palette=heatmap_colours, low=data[k0_prices].min(), high=data[k0_prices].max())
+        # heatmap_price.rect(x="Period", y="Iteration", width=1, height=1,
+        #                    source=source_heatmap_price,
+        #                    fill_color={'field': k0_prices, 'transform': mapper},
+        #                    line_color=None)
+
         # heatmap_demand.update()
         # heatmap_price.update()
 

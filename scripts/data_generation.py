@@ -209,8 +209,10 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
     area = dict()
-    area[k0_tasks_no] = num_tasks
-    area[k0_households_no] = num_households
+    area[k0_summary] = dict()
+    area[k0_summary][k1_tasks_no] = num_tasks
+    area[k0_summary][k1_households_no] = num_households
+    area[k0_summary][k1_penalty_weight] = num_households
 
     def initialise_area_trackers(k0_key, k1_key):
         if k0_key not in area:

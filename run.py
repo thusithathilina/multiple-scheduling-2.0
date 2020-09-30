@@ -1,10 +1,10 @@
 from scripts.experiment import *
 
 repeat_num = 1
-household_nums = [100]
+household_nums = [500]
 new_data = True
-# type_cost_function = "piece-wise"
-type_cost_function = "linear"
+type_cost_function = "piece-wise"
+# type_cost_function = "linear"
 algorithms_labels = dict()
 
 algorithms_labels[k1_optimal] = dict()

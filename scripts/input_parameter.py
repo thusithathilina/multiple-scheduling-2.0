@@ -38,10 +38,14 @@ file_probability = parent_folder + 'data/probability.csv'
 file_demand_list = parent_folder + 'data/demands_list.csv'
 output_folder = parent_folder + "results/"
 
+# summary related parameters
+k0_summary = "summary"
+k1_penalty_weight = "penalty_weight"
+k1_households_no = "no_households"
+k1_tasks_no = "no_tasks"
+k1_cost_type = "cost_function_type"
+
 # demand related parameters
-k0_households_no = "no_households"
-k0_tasks_no = "no_tasks"
-k0_cost_type = "cost_function_type"
 k0_starts = "start_times"
 k0_demand = "demands"
 k0_demand_max = "max_demand"
