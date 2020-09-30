@@ -8,7 +8,6 @@ from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select,
 from bokeh.plotting import figure
 from os import walk, path
 from pathlib import Path
-from scripts.input_parameter import *
 from scripts.iteration import *
 from datetime import date
 
@@ -48,11 +47,20 @@ def view_results(date_folder, time_folder):
             f2.close()
 
         k0_keys = [k0_demand]
-        k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling]
+        k1_scheduling_ks = []
+        k1_pricing_fw_ks = []
+        all_labels = area_res[k0_demand].keys()
+        for label in all_labels:
+            if "fw" in label:
+                k1_pricing_fw_ks.append(label)
+            else:
+                k1_scheduling_ks.append(label)
+
+        k1_keys = k1_scheduling_ks
         dict_to_pd_dt(area_res, prices_dict, k0_keys, k1_keys)
 
         k0_keys = [k0_demand, k0_prices]
-        k1_keys = [k1_optimal_fw, k1_heuristic_fw]
+        k1_keys = k1_pricing_fw_ks
         dict_to_pd_dt(area_res, demands_prices_fw_dict, k0_keys, k1_keys)
 
         k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_step]
@@ -60,8 +68,10 @@ def view_results(date_folder, time_folder):
             k0_keys.append(k0_time)
         if k0_demand_total in area_res:
             k0_keys.append(k0_demand_total)
-        k1_keys = [k1_optimal_fw, k1_heuristic_fw]
+        k1_keys = k1_pricing_fw_ks
         combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_keys)
+
+        return k1_scheduling_ks, k1_pricing_fw_ks
 
     prices_dict = dict()
     demands_prices_fw_dict = dict()
@@ -70,7 +80,7 @@ def view_results(date_folder, time_folder):
         date_folder = str(date.today())
     if time_folder is None:
         time_folder = [dirs for root, dirs, _ in walk(results_folder + date_folder) if dirs != []][0][0]
-    load_data(date_folder, time_folder)
+    k1_scheduling_keys, k1_pricing_fw_keys = load_data(date_folder, time_folder)
 
     # ------------------------------ 1. Data Tab ------------------------------ #
     # 1.1. initialise web widgets
@@ -85,8 +95,8 @@ def view_results(date_folder, time_folder):
     select_time = Select(title="Select time:", value=time_folder)
 
     # 1.1.3 - select: choose the algorithm
-    chosen_algorithm = k1_optimal_fw
-    algorithm_options = [k1_optimal_fw, k1_heuristic_fw]
+    chosen_algorithm = [k for k in k1_pricing_fw_keys if "optimal" in k][0]
+    algorithm_options = k1_pricing_fw_keys
     select_algorithm = Select(title="Select algorithm:", value=chosen_algorithm, options=algorithm_options)
 
     # 1.1.4 - div: show the experiment summary
@@ -232,10 +242,10 @@ def view_results(date_folder, time_folder):
         source_combined.data = others_combined_dict[select_algorithm.value]
         p_cost.update()
 
-        source_heatmap_demand.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
-        source_heatmap_price.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        heatmap_demand.rect.update()
-        heatmap_price.rect.update()
+        # source_heatmap_demand.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        # source_heatmap_price.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        # heatmap_demand.update()
+        # heatmap_price.update()
 
     def update_div_content(attr, d_f, t_f):
         # d_f = date_picker.value
