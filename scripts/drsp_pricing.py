@@ -100,8 +100,10 @@ def save_results(results, k1_algorithm_scheduling, k1_algorithm_fw, prices, cost
     return results
 
 
-def pricing_master_problem(iteration, pricing_table, area, cost_function):
+def pricing_master_problem(iteration, pricing_table, area, cost_function, alg_label):
     pricing_results = dict()
+    key_scheduling = alg_label[k2_scheduling]
+    key_pricing_fw = alg_label[k2_pricing]
 
     def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
         # the new demand profile generated at the current iteration
@@ -131,19 +133,16 @@ def pricing_master_problem(iteration, pricing_table, area, cost_function):
         return prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step
 
     # todo - the price to be hacked
-    heuristic_prices, heuristic_cost, heuristic_demands_fw, heuristic_prices_fw, \
-    heuristic_cost_fw, heuristic_penalty_fw, heuristic_step = procedure(k1_heuristic_scheduling, k1_heuristic_fw)
-    pricing_results = save_results(pricing_results, k1_heuristic_scheduling, k1_heuristic_fw,
-                                   heuristic_prices, heuristic_cost,
-                                   heuristic_demands_fw, heuristic_prices_fw, heuristic_cost_fw, heuristic_penalty_fw,
-                                   heuristic_step)
+    prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step = procedure(key_scheduling, key_pricing_fw)
+    pricing_results = save_results(pricing_results, key_scheduling, key_pricing_fw,
+                                   prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step)
 
-    optimal_prices, optimal_cost, optimal_demands_fw, optimal_prices_fw, \
-    optimal_cost_fw, optimal_penalty_fw, optimal_step = procedure(k1_optimal_scheduling, k1_optimal_fw)
-    pricing_results = save_results(pricing_results, k1_optimal_scheduling, k1_optimal_fw,
-                                   optimal_prices, optimal_cost,
-                                   optimal_demands_fw, optimal_prices_fw, optimal_cost_fw, optimal_penalty_fw,
-                                   optimal_step)
+    # optimal_prices, optimal_cost, optimal_demands_fw, optimal_prices_fw, \
+    # optimal_cost_fw, optimal_penalty_fw, optimal_step = procedure(k1_optimal_scheduling, k1_optimal_fw)
+    # pricing_results = save_results(pricing_results, k1_optimal_scheduling, k1_optimal_fw,
+    #                                optimal_prices, optimal_cost,
+    #                                optimal_demands_fw, optimal_prices_fw, optimal_cost_fw, optimal_penalty_fw,
+    #                                optimal_step)
 
     return pricing_results
 

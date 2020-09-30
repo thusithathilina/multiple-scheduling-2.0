@@ -213,7 +213,7 @@ def save_results(results, k1_algorithm_scheduling, return_dict):
 def household_scheduling_subproblem \
                 (num_intervals, num_tasks, num_periods, num_intervals_periods,
                  household, cf_weight, cf_max, area_prices, iteration,
-                 model_file, m_type, s_type, solver_choice, var_sel, val_cho):
+                 model_file, m_type, s_type, solver_choice, var_sel, val_cho, algorithm_label):
 
     # extract household data
     demands = household["demands"]
@@ -264,10 +264,12 @@ def household_scheduling_subproblem \
         return {k0_starts: actual_starts, k0_demand: demands_new, k0_obj: obj, k0_penalty: penalty, k0_time: runtime}
 
     rescheduling_results = dict()
-    rescheduling_results = save_results(rescheduling_results, k1_heuristic_scheduling,
-                                        procedure(k1_heuristic_scheduling, k1_heuristic_fw))
-    rescheduling_results = save_results(rescheduling_results, k1_optimal_scheduling,
-                                        procedure(k1_optimal_scheduling, k1_optimal_fw))
+    key_scheduling = algorithm_label[k2_scheduling]
+    key_pricing_fw = algorithm_label[k2_pricing]
+    rescheduling_results = save_results(rescheduling_results, key_scheduling,
+                                        procedure(key_scheduling, key_pricing_fw))
+    # rescheduling_results = save_results(rescheduling_results, k1_optimal_scheduling,
+    #                                     procedure(k1_optimal_scheduling, k1_optimal_fw))
 
     return rescheduling_results
 

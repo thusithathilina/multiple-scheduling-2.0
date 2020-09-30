@@ -30,75 +30,43 @@ def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, pen
     return area_dict
 
 
-def iteration(num_households, num_tasks, new_data, cost_type):
+def iteration(num_tasks, area, households, pricing_table, cost_type, str_summary, solvers, models, algorithm_label):
 
     def extract_pricing_results(k1_algorithm_scheduling, k1_algorithm_fw, results):
-        prices = results[k1_algorithm_scheduling][k0_prices]
-        cost = results[k1_algorithm_scheduling][k0_cost]
+        prices_t = results[k1_algorithm_scheduling][k0_prices]
+        cost_t = results[k1_algorithm_scheduling][k0_cost]
 
-        demands_fw = results[k1_algorithm_fw][k0_demand]
-        prices_fw = results[k1_algorithm_fw][k0_prices]
-        cost_fw = results[k1_algorithm_fw][k0_cost]
-        penalty_fw = results[k1_algorithm_fw][k0_penalty]
-        step_fw = results[k1_algorithm_fw][k0_step]
-        return prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw
+        demands_fw_t = results[k1_algorithm_fw][k0_demand]
+        prices_fw_t = results[k1_algorithm_fw][k0_prices]
+        cost_fw_t = results[k1_algorithm_fw][k0_cost]
+        penalty_fw_t = results[k1_algorithm_fw][k0_penalty]
+        step_fw_t = results[k1_algorithm_fw][k0_step]
+        return prices_t, cost_t, demands_fw_t, prices_fw_t, cost_fw_t, penalty_fw_t, step_fw_t
 
     def extract_rescheduling_results(k1_algorithm_scheduling, results):
-        starts = results[k1_algorithm_scheduling][k0_starts]
-        demands_new = results[k1_algorithm_scheduling][k0_demand]
-        obj = results[k1_algorithm_scheduling][k0_obj]
-        penalty = results[k1_algorithm_scheduling][k0_penalty]
-        time = results[k1_algorithm_scheduling][k0_time]
-        return starts, demands_new, obj, penalty, time
+        starts_t = results[k1_algorithm_scheduling][k0_starts]
+        demands_new_t = results[k1_algorithm_scheduling][k0_demand]
+        obj_t = results[k1_algorithm_scheduling][k0_obj]
+        penalty_t = results[k1_algorithm_scheduling][k0_penalty]
+        time_t = results[k1_algorithm_scheduling][k0_time]
+        return starts_t, demands_new_t, obj_t, penalty_t, time_t
 
-    # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
-    print("---------- Experiment Summary ----------")
-    str_summary = "{0} households, {1} tasks per household, {2} cost function"\
-        .format(num_households, num_tasks, cost_type)
-    print(str_summary)
-    print("---------- Experiments begin! ----------")
-
-    # 0.1 - generation household data and the total preferred demand profile
-    if new_data:
-        households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
-                                           num_households, num_tasks, care_f_weight, care_f_max, max_demand_multiplier,
-                                           file_probability, file_demand_list)
-        print("Household data created...")
-    else:
-        households, area = area_read(file_household_area_folder)
-        print("Household data read...")
-    area[k0_cost_type] = cost_type
-
-    # 0.2 - read the model file, solver choice and the pricing table (price levels and the demand table)
-    demand_level_scale = area[k0_demand_max][k1_optimal_scheduling][0] * pricing_table_weight
-    models, solvers, pricing_table \
-        = read_data(file_cp_pre, file_cp_ini, file_pricing_table, demand_level_scale, zero_digit)
-    print("Pricing table created...")
-
-    # 0.3 - the prices of the total preferred demand profile
-    pricing_results = pricing_master_problem(0, pricing_table, area, cost_type)
+    # 0.1 - the prices of the total preferred demand profile
+    pricing_results = pricing_master_problem(0, pricing_table, area, cost_type, algorithm_label)
     print("First day prices calculated...")
 
-    # 0.4 - initialise tracker values
-    # 0.4.1 - heuristic: initialise the demand profile, prices,
-    # objective values, costs, penalties, steps and the run times
-    heuristic_prices, heuristic_cost, heuristic_demands_fw, heuristic_prices_fw, \
-    heuristic_cost_fw, heuristic_penalty_fw, heuristic_step_fw \
-        = extract_pricing_results(k1_heuristic_scheduling, k1_heuristic_fw, pricing_results)
-    area = update_area_data(area, 0, k1_heuristic_scheduling, None, heuristic_prices,
-                            heuristic_cost, heuristic_cost, None, None, 0)
-    area = update_area_data(area, 0, k1_heuristic_fw, heuristic_demands_fw, heuristic_prices_fw,
-                            heuristic_cost_fw, heuristic_cost_fw, heuristic_penalty_fw, heuristic_step_fw, 0)
+    # 0.4 - initialise tracker values: objective values, costs, penalties, steps and the run times
+    key_scheduling = algorithm_label[k2_scheduling]
+    key_pricing_fw = algorithm_label[k2_pricing]
 
-    # 0.4.2 - optimal: initialise the demand profile, prices,
-    # objective values, costs, penalties, steps and the run times
-    optimal_prices, optimal_cost, optimal_demands_fw, optimal_prices_fw, \
-    optimal_cost_fw, optimal_penalty_fw, optimal_step_fw \
-        = extract_pricing_results(k1_optimal_scheduling, k1_optimal_fw, pricing_results)
-    area = update_area_data(area, 0, k1_optimal_scheduling, None, optimal_prices,
-                            optimal_cost, optimal_cost, 0, None, 0)
-    area = update_area_data(area, 0, k1_optimal_fw, optimal_demands_fw, optimal_prices_fw,
-                            optimal_cost_fw + optimal_penalty_fw, optimal_cost_fw, optimal_penalty_fw, optimal_step_fw, 0)
+    prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw \
+        = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results)
+
+    area = update_area_data(area, 0, key_scheduling, None, prices,
+                            cost, cost, None, None, 0)
+    area = update_area_data(area, 0, key_pricing_fw, demands_fw, prices_fw,
+                            cost_fw, cost_fw, penalty_fw, step_fw, 0)
+
     print("The demand profile, prices, the cost, the step, and the run time initialised...")
 
     print("---------- Initialisation done! ----------")
@@ -108,24 +76,16 @@ def iteration(num_households, num_tasks, new_data, cost_type):
     solver_choice = solvers[solver_type]
     model_file = models[solver_type][model_type]
 
-    total_time_scheduling_heuristic = 0
-    total_time_pricing_heuristic = 0
-    heuristic_step_fw = 1
+    total_time_scheduling = 0
+    total_time_pricing = 0
+    step_fw = 1
 
-    total_time_scheduling_optimal = 0
-    total_time_pricing_optimal = 0
-    optimal_step_fw = 1
-
-    while optimal_step_fw > 0 or heuristic_step_fw > 0:
+    while step_fw > 0:
 
         # -------------------- 1. rescheduling step -------------------- #
-        heuristic_demands_scheduling = [0] * no_intervals
-        heuristic_obj_area = 0
-        heuristic_penalty_area = 0
-
-        optimal_demands_scheduling = [0] * no_intervals
-        optimal_obj_area = 0
-        optimal_penalty_area = 0
+        demands_area_scheduling = [0] * no_intervals
+        obj_area = 0
+        penalty_area = 0
 
         # 1.1 - reschedule given the prices at iteration k - 1
         for key, household in households.items():
@@ -135,76 +95,46 @@ def iteration(num_households, num_tasks, new_data, cost_type):
                 = household_scheduling_subproblem(no_intervals, num_tasks, no_periods, no_intervals_periods,
                                                   household, care_f_weight, care_f_max, area[k0_prices], itr,
                                                   model_file, model_type,
-                                                  solver_type, solver_choice, var_selection, val_choice)
+                                                  solver_type, solver_choice, var_selection, val_choice,
+                                                  algorithm_label)
 
             # 1.1.2 - heuristic: extract results and update the demand profiles, total objective value and the runtime
-            heuristic_starts, heuristic_demands_household, heuristic_obj_household, heuristic_penalty_household, \
-            heuristic_time_household = extract_rescheduling_results(k1_heuristic_scheduling, rescheduling_results)
-            households[key][k0_starts][k1_heuristic_scheduling][itr] = heuristic_starts
-            heuristic_demands_scheduling \
-                = [x + y for x, y in zip(heuristic_demands_household, heuristic_demands_scheduling)]
-            heuristic_obj_area += heuristic_obj_household
-            heuristic_penalty_area += heuristic_penalty_household
-            total_time_scheduling_heuristic += heuristic_time_household
-
-            # 1.1.2 - optimal: extract results and update the demand profiles, total objective value and the runtime
-            optimal_starts, optimal_demands_household, optimal_obj_household, optimal_penalty_household, \
-            optimal_time_household = extract_rescheduling_results(k1_optimal_scheduling, rescheduling_results)
-            households[key][k0_starts][k1_optimal_scheduling][itr] = optimal_starts
-            optimal_demands_scheduling \
-                = [x + y for x, y in zip(optimal_demands_household, optimal_demands_scheduling)]
-            optimal_obj_area += optimal_obj_household
-            optimal_penalty_area += optimal_penalty_household
-            total_time_scheduling_optimal += optimal_time_household
+            starts, demands_household, obj_household, penalty_household, time_household \
+                = extract_rescheduling_results(key_scheduling, rescheduling_results)
+            households[key][k0_starts][key_scheduling][itr] = starts
+            demands_area_scheduling \
+                = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
+            obj_area += obj_household
+            penalty_area += penalty_household
+            total_time_scheduling += time_household
 
             print("household {}".format(key))
 
         # 1.2 - process and save results
-        # 1.2.1 - heuristic: convert the area demand profile for the pricing purpose
+        # 1.2.1 - convert the area demand profile for the pricing purpose
         # and save the converted area demand profiles, total objective value and the total rescheduling time
-        heuristic_demands = [sum(x) for x in grouper(heuristic_demands_scheduling, no_intervals_periods)]
-        area = update_area_data(area, itr, k1_heuristic_scheduling, heuristic_demands, None,
-                                heuristic_obj_area, heuristic_obj_area - optimal_penalty_area, optimal_penalty_area,
-                                None, total_time_scheduling_heuristic)
-
-        # 1.2.2 - optimal: heuristic: convert the area demand profile for the pricing purpose
-        # and save the converted area demand profiles, total objective value and the total rescheduling time
-        optimal_demands = [sum(x) for x in grouper(optimal_demands_scheduling, no_intervals_periods)]
-        area = update_area_data(area, itr, k1_optimal_scheduling, optimal_demands, None,
-                                optimal_obj_area, optimal_obj_area - optimal_penalty_area, optimal_penalty_area,
-                                None, total_time_scheduling_optimal)
+        demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]
+        area = update_area_data(area, itr, key_scheduling, demands, None,
+                                obj_area, obj_area - penalty_area, penalty_area,
+                                None, total_time_scheduling)
 
         # -------------------- 2. pricing step -------------------- #
         # 2.1 - calculate the prices, the step size and the cost after applying the FW algorithm
-        pricing_results_fw = pricing_master_problem(itr, pricing_table, area, cost_type)
+        pricing_results_fw = pricing_master_problem(itr, pricing_table, area, cost_type, algorithm_label)
 
         # 2.2 - save results
-        # 2.2.1 - heuristic: save the demand profiles, prices and the step size at this iteration
-        heuristic_prices, heuristic_cost, heuristic_demands_fw, heuristic_prices_fw, heuristic_cost_fw, \
-        heuristic_penalty_fw, heuristic_step_fw \
-            = extract_pricing_results(k1_heuristic_scheduling, k1_heuristic_fw, pricing_results_fw)
-        area = update_area_data(area, itr, k1_heuristic_scheduling,
-                                None, heuristic_prices,
-                                None, None, None, None, 0)
-        area = update_area_data(area, itr, k1_heuristic_fw,
-                                heuristic_demands_fw, heuristic_prices_fw,
-                                heuristic_cost_fw + heuristic_penalty_fw, heuristic_cost_fw, heuristic_penalty_fw,
-                                heuristic_step_fw, None)
+        # 2.2.1 - save the demand profiles, prices and the step size at this iteration
+        prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw \
+            = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results_fw)
+        area = update_area_data(area, itr, key_scheduling,
+                                None, prices,
+                                None, None, None, None, total_time_scheduling)
+        area = update_area_data(area, itr, key_pricing_fw,
+                                demands_fw, prices_fw,
+                                cost_fw + penalty_fw, cost_fw, penalty_fw,
+                                step_fw, total_time_scheduling)
 
-        # 2.2.2 - optimal: save the demand profiles, prices and the step size at this iteration
-        optimal_prices, optimal_cost, optimal_demand_fw, optimal_prices_fw, optimal_cost_fw, \
-        optimal_penalty_fw, optimal_step_fw \
-            = extract_pricing_results(k1_optimal_scheduling, k1_optimal_fw, pricing_results_fw)
-        area = update_area_data(area, itr, k1_optimal_scheduling,
-                                None, optimal_prices,
-                                None, None, None, None, None)
-        area = update_area_data(area, itr, k1_optimal_fw,
-                                optimal_demand_fw, optimal_prices_fw,
-                                optimal_cost_fw + optimal_penalty_fw, optimal_cost_fw, optimal_penalty_fw,
-                                optimal_step_fw, None)
-
-        print("step size at iteration {}: heuristic = {}, optimal = {}"
-              .format(itr, float(heuristic_step_fw), float(optimal_step_fw)))
+        print("step size at iteration {}  = {}" .format(itr, step_fw))
 
         # 3 - move on to the next iteration
         itr += 1
@@ -213,6 +143,5 @@ def iteration(num_households, num_tasks, new_data, cost_type):
     print("Converged in {0} iteration".format(itr - 1))
     print("---------- Iteration done! ----------")
 
-    # -------------------- 4. process results -------------------- #
-    output_date_time_folder = write_results(area, output_folder, str_summary)
+    return area, str_summary
 

@@ -62,9 +62,8 @@ k0_time = "reschedule_time"
 
 # k1_interval = "interval"
 # k1_period = "period"
-k1_optimal_scheduling = "optimal"
-k1_heuristic_scheduling = "heuristic"
-k1_optimal_fw = "optimal_fw"
-k1_heuristic_fw = "heuristic_fw"
-
+k1_optimal = "optimal"
+k1_heuristic = "heuristic"
+k2_scheduling = "scheduling"
+k2_pricing = "pricing"
 

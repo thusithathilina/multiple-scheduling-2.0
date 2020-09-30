@@ -167,7 +167,8 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
 
 def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks, cf_weight, cf_max, max_d_multiplier, f_probability, f_demand_list):
+                    num_households, num_tasks, cf_weight, cf_max, max_d_multiplier,
+                    f_probability, f_demand_list, algorithms_labels):
     probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
     households = dict()
@@ -197,11 +198,13 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         households[household_key]["max", "limit"] = max_demand
 
         households[household_key][k0_starts] = dict()
-        households[household_key][k0_starts][k1_heuristic_scheduling] = dict()
-        households[household_key][k0_starts][k1_optimal_scheduling] = dict()
 
-        households[household_key][k0_starts][k1_heuristic_scheduling][0] = preferred_starts
-        households[household_key][k0_starts][k1_optimal_scheduling][0] = preferred_starts
+        for k in algorithms_labels.keys():
+            households[household_key][k0_starts][k] = dict()
+            # households[household_key][k0_starts][k1_optimal_scheduling] = dict()
+
+            households[household_key][k0_starts][k][0] = preferred_starts
+            # households[household_key][k0_starts][k1_optimal_scheduling][0] = preferred_starts
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
@@ -217,33 +220,32 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
     # initialise trackers
     area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
     # track four types of demand profiles, prices, objective values, costs, penalties, max demands and PARs
-    k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time]
-    k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
+    k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time, k0_step]
+    # k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
     area[k0_demand_max] = dict()
     area[k0_demand_total] = dict()
     area[k0_par] = dict()
     for k0 in k0_keys:
-        for k1 in k1_keys:
-            initialise_area_trackers(k0, k1)
-            # initial values for four kinds of demand profiles, max demands, PARs and the penalty
-            if k0 == k0_demand:
-                area[k0][k1][0] = area_demand_profile_pricing
-                max_demand = max(area_demand_profile_pricing)
-                area[k0_demand_max][k1] = dict()
-                area[k0_demand_total][k1] = dict()
-                area[k0_par][k1] = dict()
-                area[k0_demand_max][k1][0] = max_demand
-                area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
-                area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
+        for alg in algorithms_labels.values():
+            for k1 in alg.values():
+                initialise_area_trackers(k0, k1)
+                # initial values for four kinds of demand profiles, max demands, PARs and the penalty
+                if k0 == k0_demand:
+                    area[k0][k1][0] = area_demand_profile_pricing
+                    max_demand = max(area_demand_profile_pricing)
+                    area[k0_demand_max][k1] = dict()
+                    area[k0_demand_total][k1] = dict()
+                    area[k0_par][k1] = dict()
+                    area[k0_demand_max][k1][0] = max_demand
+                    area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
+                    area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
 
-            if k0 == k0_penalty:
-                area[k0_penalty][k1][0] = 0
+                if k0 == k0_penalty:
+                    area[k0_penalty][k1][0] = 0
 
-    k0_keys = [k0_step]
-    k1_keys = [k1_optimal_fw, k1_heuristic_fw]
-    for k0 in k0_keys:
-        for k1 in k1_keys:
-            initialise_area_trackers(k0, k1)
+                if k0 == k0_step:
+                    if "fw" in k1:
+                        initialise_area_trackers(k0, k1)
 
     # write household data and area data into files
     if not os.path.exists(data_folder):
