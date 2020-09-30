@@ -16,7 +16,7 @@ from datetime import date
 exp_date = "2020-09-29"
 exp_time = None
 # parent_folder = "multiple/"
-# parent_folder = ""
+parent_folder = ""
 results_folder = parent_folder + "results/"
 
 
@@ -142,6 +142,7 @@ def view_results(date_folder, time_folder):
         y_iterations = [str(x) for x in (list(data.index))]
         data = data.iloc[::-1].stack().reset_index()
         data.columns = ['Iteration', 'Period', dtype]
+        source_heatmap = ColumnDataSource(data)
         tooltips = [('Iteration', '@Iteration'), ('Period', '@Period'), ('Value', '@' + dtype)]
 
         mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
@@ -156,7 +157,7 @@ def view_results(date_folder, time_folder):
         p.xaxis.major_label_orientation = pi / 3
 
         p.rect(x="Period", y="Iteration", width=1, height=1,
-               source=data,
+               source=source_heatmap,
                fill_color={'field': dtype, 'transform': mapper},
                line_color=None)
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="7px",
@@ -165,17 +166,17 @@ def view_results(date_folder, time_folder):
                              label_standoff=6, border_line_color=None, location=(0, 0))
         p.add_layout(color_bar, 'right')
 
-        return p
+        return p, source_heatmap
 
     # 2.2 demand heatmap and price heatmap
     x_location = "above"
     heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]
 
     data_type = k0_demand
-    heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
+    heatmap_demand, source_heatmap_demand = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
 
     data_type = k0_prices
-    heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
+    heatmap_price, source_heatmap_price = draw_demand_price_heatmap(data_type, x_location, heatmap_colours, k1_algorithm)
 
     # 2.4 graph tab layout
     row1 = row(p_cost, heatmap_demand)
@@ -231,11 +232,10 @@ def view_results(date_folder, time_folder):
         source_combined.data = others_combined_dict[select_algorithm.value]
         p_cost.update()
 
-        # heatmap_demand.rect.source = demands_prices_fw_dict[k0_demand][select_algorithm.value]
-        # heatmap_demand.update()
-        #
-        # heatmap_price.rect.source = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        # heatmap_price.update()
+        source_heatmap_demand.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
+        source_heatmap_price.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
+        heatmap_demand.rect.update()
+        heatmap_price.rect.update()
 
     def update_div_content(attr, d_f, t_f):
         # d_f = date_picker.value
