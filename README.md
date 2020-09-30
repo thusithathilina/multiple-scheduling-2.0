@@ -1,6 +1,6 @@
 # multiple-scheduling-2.0
 
-1. required python packages
+#### required python packages
 - bokeh==2.2.1
 - Jinja2==2.11.2
 - MarkupSafe==1.1.1
@@ -18,10 +18,10 @@
 - tornado==6.0.4
 - typing-extensions==3.7.4.3
 
-2. required software
+#### required software
 - install MiniZinc IDE following the instructions at https://www.minizinc.org/
 
-3. start the local bokeh server to visual the results
+#### start the local bokeh server to visual the results
 ```
 bokeh serve main.py
 ```
