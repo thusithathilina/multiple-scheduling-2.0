@@ -58,10 +58,8 @@ def iteration(num_tasks, area, households, pricing_table, cost_type, str_summary
     # 0.4 - initialise tracker values: objective values, costs, penalties, steps and the run times
     key_scheduling = algorithm_label[k2_scheduling]
     key_pricing_fw = algorithm_label[k2_pricing]
-
     prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw \
         = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results)
-
     area = update_area_data(area, 0, key_scheduling, None, prices,
                             cost, cost, None, None, 0)
     area = update_area_data(area, 0, key_pricing_fw, demands_fw, prices_fw,

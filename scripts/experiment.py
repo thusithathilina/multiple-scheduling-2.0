@@ -2,7 +2,7 @@ from scripts.iteration import *
 from scripts.input_parameter import *
 
 
-def experiment(num_households, num_tasks, new_data, cost_type):
+def experiment(num_households, num_tasks, new_data, cost_type, algorithms_labels):
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
@@ -10,16 +10,6 @@ def experiment(num_households, num_tasks, new_data, cost_type):
         .format(num_households, num_tasks, cost_type)
     print(str_summary)
     print("---------- Experiments begin! ----------")
-
-    # 0.0 algorithm choices
-    algorithms_labels = dict()
-    algorithms_labels[k1_optimal] = dict()
-    algorithms_labels[k1_optimal][k2_scheduling] = k1_optimal
-    algorithms_labels[k1_optimal][k2_pricing] = "{}_fw".format(k1_optimal)
-
-    algorithms_labels[k1_heuristic] = dict()
-    algorithms_labels[k1_heuristic][k2_scheduling] = k1_heuristic
-    algorithms_labels[k1_heuristic][k2_pricing] = "{}_fw".format(k1_heuristic)
 
     # 0.1 - generation household data and the total preferred demand profile
     if new_data:
