@@ -40,4 +40,4 @@ def experiment(num_households, num_tasks_min, new_data, cost_type, algorithms_la
             = iteration(num_tasks_min, area, households, pricing_table, cost_type, str_note, solvers, models, alg)
 
     # -------------------- 4. process results -------------------- #
-    output_date_time_folder = write_results(area, output_folder, summary_dict, str_note, algorithms_labels)
+    output_date_time_folder = write_results(households, area, output_folder, summary_dict, str_note, algorithms_labels)
