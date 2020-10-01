@@ -17,14 +17,16 @@ def experiment(num_households, num_tasks, new_data, cost_type, algorithms_labels
 
     print("---------- Experiments begin! ----------")
     # 0.1 - generation household data and the total preferred demand profile
-    if new_data:
+    if new_data == ReadMode.CREATE:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
                                            num_households, num_tasks, care_f_weight, care_f_max, max_demand_multiplier,
                                            file_probability, file_demand_list, algorithms_labels)
         print("Household data created...")
-    else:
+    elif new_data == ReadMode.EXISTING:
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
+    else:
+        households, area = old_job_csv_to_new_structure(r'C:\Work\pecanstreet\1minsdata\full_edited\2017-06-01_avg.csv', algorithms_labels)
 
     # 0.2 - read the model file, solver choice and the pricing table (price levels and the demand table)
     k1_temp = list(area[k0_demand_max].keys())[0]

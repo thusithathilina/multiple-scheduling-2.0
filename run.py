@@ -2,7 +2,7 @@ from scripts.experiment import *
 
 repeat_num = 1
 household_nums = [10]
-new_data = True
+new_data = ReadMode.OLD
 type_cost_function = "piece-wise"
 # type_cost_function = "linear"
 algorithms_labels = dict()

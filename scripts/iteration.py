@@ -4,6 +4,7 @@ from scripts.drsp_pricing import *
 from scripts.input_parameter import *
 from scripts.output_results import write_results
 from scripts.cfunctions import *
+from scripts.read_mode import ReadMode
 
 
 def update_data(r_dict, itr, k1_alg, d, k0):

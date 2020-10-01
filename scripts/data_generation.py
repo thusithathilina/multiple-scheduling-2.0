@@ -209,6 +209,24 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
+        area = generate_tracker(area_demand_profile, num_intervals_periods, algorithms_labels)
+
+        # write household data and area data into files
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
+
+        with open(data_folder + "households" + '.pkl', 'wb+') as f:
+            pickle.dump(households, f, pickle.HIGHEST_PROTOCOL)
+        f.close()
+
+        with open(data_folder + "area" + '.pkl', 'wb+') as f:
+            pickle.dump(area, f, pickle.HIGHEST_PROTOCOL)
+        f.close()
+
+        return households, area
+
+
+def generate_tracker(area_demand_profile, num_intervals_periods, algorithms_labels):
     area = dict()
 
     def initialise_area_trackers(k0_key, k1_key):
@@ -246,19 +264,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
                     if "fw" in k1:
                         initialise_area_trackers(k0, k1)
 
-    # write household data and area data into files
-    if not os.path.exists(data_folder):
-        os.makedirs(data_folder)
-
-    with open(data_folder + "households" + '.pkl', 'wb+') as f:
-        pickle.dump(households, f, pickle.HIGHEST_PROTOCOL)
-    f.close()
-
-    with open(data_folder + "area" + '.pkl', 'wb+') as f:
-        pickle.dump(area, f, pickle.HIGHEST_PROTOCOL)
-    f.close()
-
-    return households, area
+    return area
 
 
 def area_read(data_folder):
@@ -269,5 +275,80 @@ def area_read(data_folder):
     with open(data_folder + "area" + '.pkl', 'rb') as f:
         area = pickle.load(f)
     f.close()
+
+    return households, area
+
+
+def convert(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
+# This method can be used to convert the previous jobs.csv file to new structure
+def old_job_csv_to_new_structure(path, algorithms_labels, care_f_max = 10, delete_house_no=True, kw_to_watt = True):
+    with open(path, mode='r') as file:
+        csv_reader = reader(file)
+        headers = [h.strip(" \'") for h in next(csv_reader)]
+        if delete_house_no:
+            del headers[0]
+
+        demand_multiplier = 1
+        if kw_to_watt:
+            demand_multiplier = 1000
+
+        households = dict()
+        community = []
+        household = []
+        for row in csv_reader:
+            if len(row) == 0:
+                continue
+            if int(row[1]) == 0 and int(row[0]) > 0 and len(household) > 0:
+                community.append(household)
+                household = []
+            if delete_house_no:
+                del row[0]
+            task = {h: convert(i) for h, i in zip(headers[:len(row)], row)}
+            household.append(task)
+        community.append(household)
+
+        household_profile = [0] * no_intervals
+        area_demand_profile = [0] * no_intervals
+        h = 0
+        for household in community:
+            household_key = h
+            households[household_key] = dict()
+
+            households[household_key]["demands"] = [int(job['demand'] * demand_multiplier) for job in household]
+            households[household_key]["durs"] = [job['dur'] for job in household]
+            households[household_key]["ests"] = [job['estart'] for job in household]
+            households[household_key]["lfts"] = [job['lfinish'] for job in household]
+            households[household_key]["psts"] = [job['pstart'] for job in household]
+            households[household_key]["cfs"] = [job['caf'] * care_f_max for job in household]
+            # for the moment ignoring the job dependencies
+            households[household_key]["precs"] = dict()
+            households[household_key]["succ_delays"] = dict()
+            households[household_key]["no_prec"] = 0
+
+            for job in household:
+                for d in range(job['dur']):
+                    household_profile[(job['pstart'] + d) % no_intervals] += job['demand']
+
+            households[household_key]["profile", "preferred"] = household_profile
+            households[household_key]["max", "preferred"] = max(household_profile)
+            households[household_key]["max", "limit"] \
+                = max(households[household_key]["demands"]) * max_demand_multiplier
+
+            households[household_key][k0_starts] = dict()
+            for k in algorithms_labels.keys():
+                households[household_key][k0_starts][k] = dict()
+                households[household_key][k0_starts][k][0] = households[household_key]["psts"]
+
+            area_demand_profile = [a + b for a, b in zip(area_demand_profile, household_profile)]
+            household_profile = [0] * no_intervals
+            h += 1
+
+        area = generate_tracker(area_demand_profile, no_intervals_periods, algorithms_labels)
 
     return households, area
