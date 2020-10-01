@@ -7,7 +7,7 @@ from scripts.input_parameter import *
 from json import dumps
 
 
-def write_results(area_res, out_folder, str_sum, alg_labels):
+def write_results(area_res, out_folder, sum_dict, note, alg_labels):
     out_date_folder = out_folder + "{}/".format(str(date.today()))
     out_date_time_folder = out_date_folder + "{}/"\
         .format(str(datetime.now().time()).replace(":", "-").replace(".", "-"))
@@ -20,11 +20,15 @@ def write_results(area_res, out_folder, str_sum, alg_labels):
         mkdir(out_date_time_folder)
 
     with open(out_date_time_folder + "summary" + '.txt', 'w+') as f:
-        f.write(str_sum)
+        f.write(note)
     f.close()
 
     with open(out_date_time_folder + "area_output" + '.pkl', 'wb+') as f:
         pickle.dump(area_res, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
+
+    with open(out_date_time_folder + "summary" + '.pkl', 'wb+') as f:
+        pickle.dump(sum_dict, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
     def dict_to_pd_dt(k0_ks, k1_ks):
