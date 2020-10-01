@@ -65,7 +65,7 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
     return demand, duration, p_start, e_start, l_finish, care_f
 
 
-def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks, p_d,
+def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, p_d,
                          max_demand_multiplier, cf_max, f_demand_list):
     p_d_short = [int(p) for p in p_d[0]]
     sum_t = sum(p_d_short)
@@ -87,6 +87,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
     aggregated_loads = [0] * num_intervals
 
     # tasks in the household
+    num_tasks = r.randint(num_tasks_min, num_tasks_min + 5)
     for counter_j in range(num_tasks):
         demand, duration, p_start, e_start, l_finish, care_f \
             = task_generation(num_intervals, num_periods, num_intervals_periods,

@@ -4,12 +4,14 @@ import random as r
 from scripts.input_parameter import *
 
 
-def data_preprocessing(num_intervals, num_tasks, demands, prices_day, earliest_starts, latest_ends, durations,
+def data_preprocessing(num_intervals, demands, prices_day, earliest_starts, latest_ends, durations,
                        preferred_starts, care_factors, cf_weight, cf_max):
     max_demand = max(demands)
     max_duration = max(durations)
     run_costs = []
     big_cost = (num_intervals * cf_max * max_demand + max_demand * max_duration)
+    num_tasks = len(demands)
+
     for i in range(num_tasks):
         demand = demands[i]
         pstart = preferred_starts[i]
@@ -161,7 +163,7 @@ def household_optimal_solving \
 
     ins = Instance(gecode, model)
     ins["num_intervals"] = num_intervals
-    ins["num_tasks"] = num_tasks
+    ins["num_tasks"] = len(demands)
     ins["durations"] = durations
     ins["demands"] = demands
     ins["num_precedences"] = no_precedences
@@ -240,7 +242,7 @@ def household_scheduling_subproblem \
             prices = [int(p) for p in prices]
 
         # data preprocessing
-        run_costs = data_preprocessing(num_intervals, num_tasks, demands, prices,
+        run_costs = data_preprocessing(num_intervals, demands, prices,
                                        earliest_starts, latest_ends, durations, preferred_starts,
                                        care_factors, cf_weight, cf_max)
 
