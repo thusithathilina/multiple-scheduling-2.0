@@ -54,6 +54,7 @@ def draw_demand_price_heatmap(source_heatmap, dtype, x_loc, colors):
     mapper = LinearColorMapper(palette=colors, low=0, high=999999)
     p = figure(title='{} Heatmap'.format(dtype.capitalize()),
                y_range=[str(x) for x in range(10)],
+               x_range=[str(x) for x in range(48)],
                x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
     p.grid.grid_line_color = None
@@ -199,8 +200,10 @@ def view_results(date_folder, time_folder, res_folder):
 
     def update_heatmap(chosen_algorithm, k0_label, source, plot, mapper, chart, colour_bar):
         data = demands_prices_fw_dict[k0_label][chosen_algorithm]
+        x_periods = [str(x) for x in (list(data.columns))]
         y_iterations = [str(x) for x in (list(data.index))]
         plot.y_range.factors = y_iterations
+        plot.x_range.factors = x_periods
 
         data = data.iloc[::-1].stack().reset_index()
         data.columns = ['Iteration', 'Period', k0_label]
@@ -315,15 +318,22 @@ def view_results(date_folder, time_folder, res_folder):
         # update_heatmap(k0_prices, source_heatmap_price, plot_heatmap_price, mapper_price,
         #                chart_heatmap_price, color_bar_prices)
 
-    # ------------------------------ 5. assign event functions to widgets ------------------------------ #
+    # ------------------------------ 3. assign event functions to widgets ------------------------------ #
     header_date.on_change("value", callback_update_header_time_options)
     header_time.on_change("value", callback_update_data_source)
     header_algorithm.on_change("value", callback_switch_algorithm)
     data_radio_button_group.on_change("active", callback_update_data_table)
 
-    callback_update_header_time_options(None, None, exp_date)
-
     curdoc().add_root(layout_overall)
+
+    # ------------------------------ 4. initialise ------------------------------ #
+    start_date = exp_date if exp_date is not None else str(date.today())
+    start_time = exp_time if exp_time is not None else header_time.value
+
+    callback_update_header_time_options(None, None, start_date)
+    callback_update_data_source(None, None, start_time)
+    callback_switch_algorithm(None, None, header_algorithm.value)
+    callback_update_data_table(None, None, 0)
 
 
 view_results(exp_date, exp_time, results_folder)
