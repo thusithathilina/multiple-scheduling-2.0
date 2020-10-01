@@ -168,7 +168,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
 
 def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks, cf_weight, cf_max, max_d_multiplier,
+                    num_households, num_tasks_min, cf_weight, cf_max, max_d_multiplier,
                     f_probability, f_demand_list, algorithms_labels):
     probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
@@ -178,7 +178,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
     for h in range(num_households):
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
         num_precedences, precedors, succ_delays, max_demand, household_profile \
-            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks,
+            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min,
                                    probability, max_d_multiplier, cf_max, f_demand_list)
 
         household_key = h

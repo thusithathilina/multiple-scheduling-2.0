@@ -30,7 +30,7 @@ def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, pen
     return area_dict
 
 
-def iteration(num_tasks, area, households, pricing_table, cost_type, str_summary, solvers, models, algorithm_label):
+def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_summary, solvers, models, algorithm_label):
 
     def extract_pricing_results(k1_algorithm_scheduling, k1_algorithm_fw, results):
         prices_t = results[k1_algorithm_scheduling][k0_prices]
@@ -90,7 +90,7 @@ def iteration(num_tasks, area, households, pricing_table, cost_type, str_summary
 
             # 1.1.1 - reschedule a household
             rescheduling_results \
-                = household_scheduling_subproblem(no_intervals, num_tasks, no_periods, no_intervals_periods,
+                = household_scheduling_subproblem(no_intervals, no_periods, no_intervals_periods,
                                                   household, care_f_weight, care_f_max, area[k0_prices], itr,
                                                   model_file, model_type,
                                                   solver_type, solver_choice, var_selection, val_choice,
