@@ -41,7 +41,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
         cost_fw_t = results[k1_algorithm_fw][k0_cost]
         penalty_fw_t = results[k1_algorithm_fw][k0_penalty]
         step_fw_t = results[k1_algorithm_fw][k0_step]
-        time_fw_t = results[k1_algorithm_fw][k0_step][k0_time]
+        time_fw_t = results[k1_algorithm_fw][k0_time]
 
         return prices_t, cost_t, demands_fw_t, prices_fw_t, cost_fw_t, penalty_fw_t, step_fw_t, time_fw_t
 
@@ -60,7 +60,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
     # 0.4 - initialise tracker values: objective values, costs, penalties, steps and the run times
     key_scheduling = algorithm_label[k2_scheduling]
     key_pricing_fw = algorithm_label[k2_pricing]
-    prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw, time_fw_t \
+    prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw, time_fw \
         = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results)
     area = update_area_data(area, 0, key_scheduling, None, prices,
                             cost, cost, None, None, 0)
@@ -110,34 +110,29 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
 
             print("household {}".format(key))
 
-        # 1.2 - extract results: convert the area demand profile for the pricing purpose
-        # and save the converted area demand profiles, total objective value and the total rescheduling time
-        # area = update_area_data(area, itr, key_scheduling, demands, None,
-        #                         obj_area, obj_area - penalty_area, penalty_area,
-        #                         None, total_time_scheduling)
+        # 1.2 - process and save results: the area demand profiles, total objective value and the rescheduling time
+        demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]
+        area = update_area_data(area, itr, key_scheduling, demands, None,
+                                obj_area, obj_area - penalty_area, penalty_area,
+                                None, total_time_scheduling)
 
         # ------------------------------ 2. pricing step ------------------------------ #
-        # 2.1 convert area demand profiles
-        demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]
-
-        # 2.2 - calculate the prices, the step size and the cost after applying the FW algorithm
+        # 2.1 - calculate the prices, the step size and the cost after applying the FW algorithm
         pricing_results_fw = pricing_master_problem(itr, pricing_table, area, cost_type, algorithm_label)
 
-        # 2.3 - extract results: the demand profiles, prices and the step size at this iteration
+        # 2.2 - save results: the demand profiles, prices and the step size at this iteration
         prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw, time_fw \
             = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results_fw)
         total_time_pricing += time_fw
+        print("step size at iteration {}  = {}".format(itr, step_fw))
 
-        # ------------------------------ 3. save data ------------------------------ #
         area = update_area_data(area, itr, key_scheduling,
-                                demands, prices,
-                                obj_area, obj_area - penalty_area, penalty_area, None, total_time_scheduling)
+                                None, prices,
+                                None, None, None, None, None)
         area = update_area_data(area, itr, key_pricing_fw,
                                 demands_fw, prices_fw,
                                 cost_fw + penalty_fw, cost_fw, penalty_fw,
-                                step_fw, total_time_pricing)
-
-        print("step size at iteration {}  = {}" .format(itr, step_fw))
+                                step_fw, total_time_scheduling)
 
         # 3 - move on to the next iteration
         itr += 1

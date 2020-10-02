@@ -127,8 +127,8 @@ def pricing_master_problem(iteration, pricing_table, area, cost_function, alg_la
                                     cost_function_type, prices_fw_pre, cost_fw_pre)
         else:
             demands_fw1 = demands_new
-            prices_fw1 = prices
-            cost_fw1 = cost
+            prices_fw1 = prices1
+            cost_fw1 = cost1
             penalty_fw1 = penalty_new
             step1 = 1
 

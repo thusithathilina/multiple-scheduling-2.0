@@ -13,6 +13,7 @@ from datetime import date
 from math import pi
 
 exp_date = "2020-10-01"
+exp_date = None
 exp_time = "01-22-14-924742"
 # parent_folder = "multiple/"
 parent_folder = ""
@@ -30,13 +31,15 @@ def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
             # target_dict[k0][k1].stack().reset_index()
 
 
-def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
-    for k1 in k1_ks:
+def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_s, k1_p):
+    for ks, kp in zip(k1_s, k1_p):
         combined_dict = dict()
         for k0 in k0_ks:
-            combined_dict[k0] = area_res[k0][k1]
+            combined_dict[k0] = area_res[k0][kp]
+            if k0 == k0_time:
+                combined_dict[k0] = area_res[k0][ks]
         df = pd.DataFrame(combined_dict, columns=k0_ks).reset_index(drop=True)
-        target_dict[k1] = df
+        target_dict[kp] = df
 
 
 def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_data, hover):
@@ -276,7 +279,7 @@ def view_results(date_folder, time_folder, res_folder):
             k0_keys.append(k0_time)
         if k0_demand_total in area_res:
             k0_keys.append(k0_demand_total)
-        combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_pricing_fw_ks)
+        combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_scheduling_ks, k1_pricing_fw_ks)
 
         return k1_scheduling_ks, k1_pricing_fw_ks
 
