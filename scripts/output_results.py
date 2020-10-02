@@ -7,6 +7,11 @@ from scripts.input_parameter import *
 from json import dumps
 
 
+def aggregate_results(res, summary):
+    # time
+    return summary
+
+
 def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
     out_date_folder = out_folder + "{}/".format(str(date.today()))
     out_date_time_folder = out_date_folder + "{}/"\

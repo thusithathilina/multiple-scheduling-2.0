@@ -9,7 +9,7 @@ def experiment(num_households, num_tasks_min, new_data, cost_type, algorithms_la
     summary_dict = dict()
     summary_dict[k1_tasks_no] = num_tasks_min
     summary_dict[k1_households_no] = num_households
-    summary_dict[k1_penalty_weight] = num_households
+    summary_dict[k1_penalty_weight] = care_f_weight
     summary_dict[k1_cost_type] = cost_type
     str_note = "{0} households, min {1} tasks per household, {2} cost function, {3} care factor weight" \
         .format(num_households, num_tasks_min, cost_type, care_f_weight)
@@ -19,8 +19,8 @@ def experiment(num_households, num_tasks_min, new_data, cost_type, algorithms_la
     # 0.1 - generation household data and the total preferred demand profile
     if new_data:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods, file_household_area_folder,
-                                           num_households, num_tasks_min, care_f_weight, care_f_max, max_demand_multiplier,
-                                           file_probability, file_demand_list, algorithms_labels)
+                                           num_households, num_tasks_min, care_f_weight, care_f_max,
+                                           max_demand_multiplier, file_probability, file_demand_list, algorithms_labels)
         print("Household data created...")
     else:
         households, area = area_read(file_household_area_folder)
