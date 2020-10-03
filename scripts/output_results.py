@@ -4,28 +4,43 @@ from shutil import copy
 import pickle
 import pandas as pd
 from scripts.input_parameter import *
+from scripts.cfunctions import average
 from json import dumps
 
 
-def aggregate_results(res, summary):
-    # total time
+def aggregate_results(itr, res, key_params):
 
-    # total iterations
+    def reduction(k0):
+        summary[k0 + " reduction"] = dict()
+        for alg2 in res[k0]:
+            summary[k0 + " reduction"][alg2] \
+                = round((res[k0][alg2][0] - res[k0][alg2][itr]) / res[k0][alg2][0], 2)
 
-    # key input parameters - care factor weight, demand level scaler,
+    def save_key_parameters():
+        for param_k, param_v in key_params.items():
+            summary[param_k] = dict()
+            for alg3 in res[k0_demand]:
+                summary[param_k][alg3] = param_v
 
-    # cost reduction in %
+    summary = dict()
+    save_key_parameters()
+    reduction(k0_demand_max)
+    reduction(k0_par)
+    reduction(k0_obj)
+    reduction(k0_cost)
+    reduction(k0_par)
 
-    # par reduction in %
+    summary["Average " + k0_time] = dict()
+    for alg in res[k0_time]:
+        summary["Average " + k0_time][alg] = average(res[k0_time][alg].values())
 
-    # max reduction in %
-
-    # cost function type
-
-    return summary
+    return res, summary
 
 
-def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
+def write_results(iterations, key_parameters, area_res, out_folder, note, alg_labels):
+
+    area_res, sum_dict = aggregate_results(iterations, area_res, key_parameters)
+
     out_date_folder = out_folder + "{}/".format(str(date.today()))
     out_date_time_folder = out_date_folder + "{}/"\
         .format(str(datetime.now().time()).replace(":", "-").replace(".", "-"))
@@ -45,13 +60,11 @@ def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
         pickle.dump(area_res, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
-    pd.DataFrame.from_dict(households, orient='index')\
-        .to_csv(out_date_time_folder + "{}.csv".format("households"))
-
-    sum_dict = aggregate_results(area_res, sum_dict)
     with open(out_date_time_folder + "summary" + '.pkl', 'wb+') as f:
         pickle.dump(sum_dict, f, pickle.HIGHEST_PROTOCOL)
     f.close()
+
+    pd.DataFrame.from_dict(sum_dict, orient='index').to_csv(out_date_time_folder + "{}.csv".format("summary"))
 
     def dict_to_pd_dt(k0_ks, k1_ks):
         for k0 in k0_ks:
@@ -64,13 +77,17 @@ def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
     def combine_dict_to_pd_dt(k0_ks, k1_schedule, k1_pricing):
         for k1_s, k1_p in zip(k1_schedule, k1_pricing):
             combined_dict = dict()
+            pd_columns = []
             for k0 in k0_ks:
                 if k0 in area_res:
-                    if k1_p in area_res[k0]:
+                    if k1_s in area_res[k0] and k0 == k0_time:
+                        combined_dict[k1_time_scheduling] = area_res[k0][k1_s]
+                        combined_dict[k1_time_pricing] = area_res[k0][k1_p]
+                        pd_columns.extend([k1_time_scheduling, k1_time_pricing])
+                    elif k1_p in area_res[k0]:
                         combined_dict[k0] = area_res[k0][k1_p]
-                    elif k1_s in area_res[k0] and k0 == k0_time:
-                        combined_dict[k0] = area_res[k0][k1_s]
-            df = pd.DataFrame(combined_dict, columns=k0_ks)
+                        pd_columns.append(k0)
+            df = pd.DataFrame(combined_dict, columns=pd_columns)
             df.to_csv(out_date_time_folder + "{}-{}.csv".format("others", k1_p))
 
     k1_scheduling_keys = []
@@ -91,6 +108,8 @@ def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
     # copy the generated data
     copy('data/area.pkl', out_date_time_folder + "area_input.pkl")
     copy('data/households.pkl', out_date_time_folder + "households_input.pkl")
+    # pd.DataFrame.from_dict(households, orient='index') \
+    #     .to_csv(out_date_time_folder + "{}.csv".format("households"))
 
     return out_date_time_folder
 

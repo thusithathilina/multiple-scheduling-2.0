@@ -75,12 +75,11 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
     itr = 1
     solver_choice = solvers[solver_type]
     model_file = models[solver_type][model_type]
-
-    total_time_scheduling = 0
-    total_time_pricing = 0
     step_fw = 1
-
     while step_fw > 0:
+
+        time_scheduling_iteration = 0
+        time_pricing_iteration = 0
 
         # ------------------------------ 1. rescheduling step ------------------------------ #
         demands_area_scheduling = [0] * no_intervals
@@ -106,7 +105,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
                 = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
             obj_area += obj_household
             penalty_area += penalty_household
-            total_time_scheduling += time_household
+            time_scheduling_iteration += time_household
 
             print("household {}".format(key))
 
@@ -114,7 +113,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
         demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]
         area = update_area_data(area, itr, key_scheduling, demands, None,
                                 obj_area, obj_area - penalty_area, penalty_area,
-                                None, total_time_scheduling)
+                                None, time_scheduling_iteration)
 
         # ------------------------------ 2. pricing step ------------------------------ #
         # 2.1 - calculate the prices, the step size and the cost after applying the FW algorithm
@@ -123,7 +122,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
         # 2.2 - save results: the demand profiles, prices and the step size at this iteration
         prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step_fw, time_fw \
             = extract_pricing_results(key_scheduling, key_pricing_fw, pricing_results_fw)
-        total_time_pricing += time_fw
+        time_pricing_iteration += time_fw
         print("step size at iteration {}  = {}".format(itr, step_fw))
 
         area = update_area_data(area, itr, key_scheduling,
@@ -132,7 +131,7 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
         area = update_area_data(area, itr, key_pricing_fw,
                                 demands_fw, prices_fw,
                                 cost_fw + penalty_fw, cost_fw, penalty_fw,
-                                step_fw, total_time_scheduling)
+                                step_fw, time_pricing_iteration)
 
         # 3 - move on to the next iteration
         itr += 1
@@ -141,5 +140,5 @@ def iteration(num_tasks_min, area, households, pricing_table, cost_type, str_sum
     print("Converged in {0} iteration".format(itr - 1))
     print("---------- Iteration done! ----------")
 
-    return area, str_summary
+    return area, str_summary, itr - 1
 

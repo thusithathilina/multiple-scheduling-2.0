@@ -12,9 +12,9 @@ from scripts.input_parameter import *
 from datetime import date
 from math import pi
 
-exp_date = "2020-10-01"
-exp_date = None
-exp_time = "01-22-14-924742"
+exp_date = "2020-10-04"
+# exp_date = None
+exp_time = "03-01-33-645175"
 # parent_folder = "multiple/"
 parent_folder = ""
 results_folder = parent_folder + "results/"
@@ -34,11 +34,16 @@ def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
 def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_s, k1_p):
     for ks, kp in zip(k1_s, k1_p):
         combined_dict = dict()
+        pd_columns = []
         for k0 in k0_ks:
-            combined_dict[k0] = area_res[k0][kp]
             if k0 == k0_time:
-                combined_dict[k0] = area_res[k0][ks]
-        df = pd.DataFrame(combined_dict, columns=k0_ks).reset_index(drop=True)
+                combined_dict[k1_time_scheduling] = area_res[k0][ks]
+                combined_dict[k1_time_pricing] = area_res[k0][kp]
+                pd_columns.extend([k1_time_scheduling, k1_time_pricing])
+            else:
+                combined_dict[k0] = area_res[k0][kp]
+                pd_columns.append(k0)
+        df = pd.DataFrame(combined_dict, columns=pd_columns).reset_index(drop=True)
         target_dict[kp] = df
 
 

@@ -39,11 +39,12 @@ file_demand_list = parent_folder + 'data/demands_list.csv'
 output_folder = parent_folder + "results/"
 
 # summary related parameters
-k0_summary = "summary"
-k1_penalty_weight = "penalty_weight"
-k1_households_no = "no_households"
-k1_tasks_no = "no_tasks"
-k1_cost_type = "cost_function_type"
+k0_area = "area"
+k0_penalty_weight = "penalty_weight"
+k0_households_no = "no_households"
+k0_tasks_no = "no_tasks"
+k0_cost_type = "cost_function_type"
+
 
 # demand related parameters
 k0_starts = "start_times"
@@ -61,8 +62,11 @@ k0_obj = "objective"
 k0_prices = "prices"
 k0_price_levels = "price_levels"
 k0_demand_table = "demand_levels"
+
 # run time related
-k0_time = "reschedule_time"
+k0_time = "run_time"
+k1_time_scheduling = "rescheduling_time"
+k1_time_pricing = "pricing_time"
 
 # k1_interval = "interval"
 # k1_period = "period"

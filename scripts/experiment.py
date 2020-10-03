@@ -6,11 +6,6 @@ def experiment(num_households, num_tasks_min, new_data, cost_type, algorithms_la
 
     # -------------------- 0. initialise experiment (iteration = 0) -------------------- #
     print("---------- Experiment Summary ----------")
-    summary_dict = dict()
-    summary_dict[k1_tasks_no] = num_tasks_min
-    summary_dict[k1_households_no] = num_households
-    summary_dict[k1_penalty_weight] = care_f_weight
-    summary_dict[k1_cost_type] = cost_type
     str_note = "{0} households, min {1} tasks per household, {2} cost function, {3} care factor weight" \
         .format(num_households, num_tasks_min, cost_type, care_f_weight)
     print(str_note)
@@ -34,10 +29,17 @@ def experiment(num_households, num_tasks_min, new_data, cost_type, algorithms_la
     print("Pricing table created...")
 
     # 1 - the iteration!
+    iterations = 0
     for alg in algorithms_labels.values():
         print("---------- {} ----------".format(alg))
-        area, str_summary \
+        area, str_summary, iterations \
             = iteration(num_tasks_min, area, households, pricing_table, cost_type, str_note, solvers, models, alg)
 
     # -------------------- 4. process results -------------------- #
-    output_date_time_folder = write_results(households, area, output_folder, summary_dict, str_note, algorithms_labels)
+    key_parameters = {k0_tasks_no: num_tasks_min,
+                      k0_households_no: num_households,
+                      k0_penalty_weight: care_f_weight,
+                      k0_cost_type: cost_function_type}
+
+    output_date_time_folder = write_results(iterations, key_parameters, area, output_folder,
+                                            str_note, algorithms_labels)
