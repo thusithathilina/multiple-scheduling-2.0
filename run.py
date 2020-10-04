@@ -1,7 +1,7 @@
 from scripts.experiment import *
 
 repeat_num = 1
-household_nums = [10]
+household_nums = [100]
 new_data = True
 type_cost_function = "piece-wise"
 # type_cost_function = "linear"
