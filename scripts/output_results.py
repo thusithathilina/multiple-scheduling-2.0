@@ -32,7 +32,7 @@ def aggregate_results(itr, res, key_params):
 
     summary["Average " + k0_time] = dict()
     for alg in res[k0_time]:
-        summary["Average " + k0_time][alg] = average(res[k0_time][alg].values())
+        summary["Average " + k0_time][alg] = round(average(res[k0_time][alg].values()), 3)
 
     return res, summary
 

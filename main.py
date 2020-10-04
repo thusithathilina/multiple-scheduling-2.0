@@ -14,10 +14,18 @@ from math import pi
 
 exp_date = "2020-10-04"
 # exp_date = None
-exp_time = "03-01-33-645175"
+exp_time = "04-29-41-234378"
 # parent_folder = "multiple/"
 parent_folder = ""
 results_folder = parent_folder + "results/"
+
+
+def to_pd(sum_dt, target_dict):
+    for k0, v0 in sum_dt.items():
+        for k1, v1 in v0.items():
+            if k1 not in target_dict:
+                target_dict[k1] = dict()
+            target_dict[k1][k0] = v1
 
 
 def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
@@ -86,7 +94,7 @@ def draw_demand_price_heatmap(source_heatmap, dtype, x_loc, colors):
 
 
 def make_data_tab():
-    radio_button_group = RadioButtonGroup(labels=["Statistics", "Demand Profile", "Price Profile"], active=0)
+    radio_button_group = RadioButtonGroup(labels=["Summary", "Statistics", "Demand Profile", "Price Profile"], active=0)
     source_datatable = ColumnDataSource()
     data_table = DataTable(source=source_datatable, index_position=None)
 
@@ -94,7 +102,6 @@ def make_data_tab():
 
 
 def make_graph_tab(s_combined, s_heatmap_demand, s_heatmap_price):
-
     # 4.1 line charts
     hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
     plot_line_cost = draw_line_chart(source_data=s_combined, title='Cost per Iteration',
@@ -153,7 +160,6 @@ def make_header(date_folder, time_folder, res_folder):
 
 
 def view_results(date_folder, time_folder, res_folder):
-
     # ------------------------------ 1. draw widgets ------------------------------ #
     # 1.1 header
     header_date, header_time, header_algorithm, header_note \
@@ -205,6 +211,7 @@ def view_results(date_folder, time_folder, res_folder):
     prices_dict = dict()
     demands_prices_fw_dict = dict()
     others_combined_dict = dict()
+    summary_dict = dict()
 
     def update_heatmap(chosen_algorithm, k0_label, source, plot, mapper, chart, colour_bar):
         data = demands_prices_fw_dict[k0_label][chosen_algorithm]
@@ -229,18 +236,23 @@ def view_results(date_folder, time_folder, res_folder):
         plot_line_demand_max.update()
 
     def update_data_table(active_radio_button, chosen_algorithm):
-
-        if active_radio_button == 1:  # demand
-            source_datatable.data = demands_prices_fw_dict[k0_demand][chosen_algorithm]
-        if active_radio_button == 2:  # prices
-            source_datatable.data = demands_prices_fw_dict[k0_prices][chosen_algorithm]
-        if active_radio_button == 0:  # others
+        if active_radio_button == 0:  # summary
+            source_datatable.data = pd.DataFrame.from_dict(summary_dict, orient='index')
+        elif active_radio_button == 1:  # statistics
             source_datatable.data = others_combined_dict[chosen_algorithm]
+        elif active_radio_button == 2:  # demand
+            source_datatable.data = demands_prices_fw_dict[k0_demand][chosen_algorithm]
+        elif active_radio_button == 3:  # prices
+            source_datatable.data = demands_prices_fw_dict[k0_prices][chosen_algorithm]
 
         columns_keys = source_datatable.data.keys()
-        table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
-                                     formatter=NumberFormatter(format="0,0.00", text_align="right"))
-                         for i in columns_keys]
+        if active_radio_button == 0:
+            table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize())
+                             for i in columns_keys]
+        else:
+            table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
+                                         formatter=NumberFormatter(format="0,0.00", text_align="right"))
+                             for i in columns_keys]
         data_table.columns = table_columns
         data_table.update()
 
@@ -260,11 +272,16 @@ def view_results(date_folder, time_folder, res_folder):
         f.close()
         header_note.text = str_summary
 
+        with open(date_time_folder + "summary.pkl", 'rb') as f2:
+            summary = pickle.load(f2)
+            f2.close()
+        to_pd(summary, summary_dict)
+
+        # df.columns = [str(x) for x in range(len(area_res[k0][k1][0]))]
+
         with open(date_time_folder + "area_output.pkl", 'rb') as f2:
             area_res = pickle.load(f2)
             f2.close()
-
-        k0_keys = [k0_demand]
         k1_scheduling_ks = []
         k1_pricing_fw_ks = []
         all_labels = area_res[k0_demand].keys()
@@ -274,10 +291,8 @@ def view_results(date_folder, time_folder, res_folder):
             else:
                 k1_scheduling_ks.append(label)
 
-        dict_to_pd_dt(area_res, prices_dict, k0_keys, k1_scheduling_ks)
-
-        k0_keys = [k0_demand, k0_prices]
-        dict_to_pd_dt(area_res, demands_prices_fw_dict, k0_keys, k1_pricing_fw_ks)
+        dict_to_pd_dt(area_res, prices_dict, [k0_demand], k1_scheduling_ks)
+        dict_to_pd_dt(area_res, demands_prices_fw_dict, [k0_demand, k0_prices], k1_pricing_fw_ks)
 
         k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_step]
         if k0_time in area_res:
@@ -341,7 +356,7 @@ def view_results(date_folder, time_folder, res_folder):
     callback_update_header_time_options(None, None, start_date)
     callback_update_data_source(None, None, start_time)
     callback_switch_algorithm(None, None, header_algorithm.value)
-    callback_update_data_table(None, None, 0)
+    # callback_update_data_table(None, None, 0)
 
 
 view_results(exp_date, exp_time, results_folder)
