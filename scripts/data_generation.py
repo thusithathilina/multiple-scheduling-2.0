@@ -65,8 +65,8 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
     return demand, duration, p_start, e_start, l_finish, care_f
 
 
-def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, p_d,
-                         max_demand_multiplier, cf_max, f_demand_list):
+def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, num_tasks_max, p_d,
+                         max_demand_mul, cf_max, f_demand_list):
     p_d_short = [int(p) for p in p_d[0]]
     sum_t = sum(p_d_short)
     p_d_short = [p / sum_t for p in p_d_short]
@@ -87,7 +87,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
     aggregated_loads = [0] * num_intervals
 
     # tasks in the household
-    num_tasks = r.randint(num_tasks_min, num_tasks_min + 5)
+    num_tasks = r.randint(num_tasks_min, num_tasks_max)
     for counter_j in range(num_tasks):
         demand, duration, p_start, e_start, l_finish, care_f \
             = task_generation(num_intervals, num_periods, num_intervals_periods,
@@ -102,7 +102,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
         for d in range(duration):
             aggregated_loads[(p_start + d) % num_intervals] += demand
     # set the household demand limit
-    maximum_demand = max(demands) * max_demand_multiplier
+    maximum_demand = max(demands) * max_demand_mul
 
     # precedence among tasks
     precedors = dict()
@@ -168,7 +168,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
 
 
 def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks_min, cf_weight, cf_max, max_d_multiplier,
+                    num_households, num_tasks_min, num_tasks_max, cf_weight, cf_max, max_d_multiplier,
                     f_probability, f_demand_list, algorithms_labels):
     probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
@@ -178,7 +178,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
     for h in range(num_households):
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
         num_precedences, precedors, succ_delays, max_demand, household_profile \
-            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min,
+            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, num_tasks_max,
                                    probability, max_d_multiplier, cf_max, f_demand_list)
 
         household_key = h
@@ -209,42 +209,26 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
+    area_demand_profile2 = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+    max_demand = max(area_demand_profile2)
+    total_demand = sum(area_demand_profile2)
+    par = round(max_demand / average(area_demand_profile2), 2)
     area = dict()
+    for k1, v1 in algorithms_labels.items():
+        # area[k1] = dict()
+        for v2 in v1.values():
+            area[v2] = dict()
+            area[v2][k0_demand] = dict()
+            area[v2][k0_demand_max] = dict()
+            area[v2][k0_demand_total] = dict()
+            area[v2][k0_par] = dict()
+            area[v2][k0_penalty] = dict()
 
-    def initialise_area_trackers(k0_key, k1_key):
-        if k0_key not in area:
-            area[k0_key] = dict()
-        area[k0_key][k1_key] = dict()
-
-    # initialise trackers
-    area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    # track four types of demand profiles, prices, objective values, costs, penalties, max demands and PARs
-    k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time, k0_step]
-    # k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
-    area[k0_demand_max] = dict()
-    area[k0_demand_total] = dict()
-    area[k0_par] = dict()
-    for k0 in k0_keys:
-        for alg in algorithms_labels.values():
-            for k1 in alg.values():
-                initialise_area_trackers(k0, k1)
-                # initial values for four kinds of demand profiles, max demands, PARs and the penalty
-                if k0 == k0_demand:
-                    area[k0][k1][0] = area_demand_profile_pricing
-                    max_demand = max(area_demand_profile_pricing)
-                    area[k0_demand_max][k1] = dict()
-                    area[k0_demand_total][k1] = dict()
-                    area[k0_par][k1] = dict()
-                    area[k0_demand_max][k1][0] = max_demand
-                    area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
-                    area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
-
-                if k0 == k0_penalty:
-                    area[k0_penalty][k1][0] = 0
-
-                if k0 == k0_step:
-                    if "fw" in k1:
-                        initialise_area_trackers(k0, k1)
+            area[v2][k0_demand][0] = area_demand_profile2
+            area[v2][k0_demand_max][0] = max_demand
+            area[v2][k0_demand_total][0] = total_demand
+            area[v2][k0_par][0] = par
+            area[v2][k0_penalty][0] = 0
 
     # write household data and area data into files
     if not os.path.exists(data_folder):

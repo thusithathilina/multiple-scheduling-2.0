@@ -85,68 +85,34 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
     return demand_profile_fw, best_step_size, price_day, cost, penalty
 
 
-def save_results(results, k1_algorithm_scheduling, k1_algorithm_fw, prices, cost, demands_fw, prices_fw,
-                 cost_fw, penalty_fw, step, run_t):
-    results[k1_algorithm_scheduling] = dict()
-    results[k1_algorithm_scheduling][k0_prices] = prices
-    results[k1_algorithm_scheduling][k0_cost] = cost
+def pricing_master_problem(iteration, pricing_table, area, cost_function, k1_algorithm_scheduling, k1_algorithm_fw):
 
-    results[k1_algorithm_fw] = dict()
-    results[k1_algorithm_fw][k0_demand] = demands_fw
-    results[k1_algorithm_fw][k0_prices] = prices_fw
-    results[k1_algorithm_fw][k0_cost] = cost_fw
-    results[k1_algorithm_fw][k0_penalty] = penalty_fw
-    results[k1_algorithm_fw][k0_step] = step
-    results[k1_algorithm_fw][k0_time] = run_t
+    # the new demand profile generated at the current iteration
+    demands_new = area[k1_algorithm_scheduling][k0_demand][iteration]
+    penalty_new = area[k1_algorithm_scheduling][k0_penalty][iteration]
 
-    return results
+    # calculate the prices and the cost of the new demand profile
+    prices1, cost1 = pricing_cost(demands_new, pricing_table, cost_function)
 
-
-def pricing_master_problem(iteration, pricing_table, area, cost_function, alg_label):
-    pricing_results = dict()
-    key_scheduling = alg_label[k2_scheduling]
-    key_pricing_fw = alg_label[k2_pricing]
-
-    def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
-        # the new demand profile generated at the current iteration
-        demands_new = area[k0_demand][k1_algorithm_scheduling][iteration]
-        penalty_new = area[k0_penalty][k1_algorithm_scheduling][iteration]
-
-        # calculate the prices and the cost of the new demand profile
-        prices1, cost1 = pricing_cost(demands_new, pricing_table, cost_function)
-
-        if iteration > 0:
-            demands_fw_pre = area[k0_demand][k1_algorithm_fw][iteration - 1]
-            prices_fw_pre = area[k0_prices][k1_algorithm_fw][iteration - 1]
-            cost_fw_pre = area[k0_cost][k1_algorithm_fw][iteration - 1]
-            penalty_fw_pre = area[k0_penalty][k1_algorithm_fw][iteration - 1]
-
-            demands_fw1, step1, prices_fw1, cost_fw1, penalty_fw1 \
-                = pricing_step_size(pricing_table, demands_fw_pre, demands_new,
-                                    penalty_fw_pre, penalty_new,
-                                    cost_function_type, prices_fw_pre, cost_fw_pre)
-        else:
-            demands_fw1 = demands_new
-            prices_fw1 = prices1
-            cost_fw1 = cost1
-            penalty_fw1 = penalty_new
-            step1 = 1
-
-        return prices1, cost1, demands_fw1, prices_fw1, cost_fw1, penalty_fw1, step1
-
-    # todo - the price to be hacked
     t_begin = time()
-    prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step = procedure(key_scheduling, key_pricing_fw)
-    run_time = time() - t_begin
-    pricing_results = save_results(pricing_results, key_scheduling, key_pricing_fw,
-                                   prices, cost, demands_fw, prices_fw, cost_fw, penalty_fw, step, run_time)
+    if iteration > 0:
+        demands_fw_pre = area[k1_algorithm_fw][k0_demand][iteration - 1]
+        prices_fw_pre = area[k1_algorithm_fw][k0_prices][iteration - 1]
+        cost_fw_pre = area[k1_algorithm_fw][k0_cost][iteration - 1]
+        penalty_fw_pre = area[k1_algorithm_fw][k0_penalty][iteration - 1]
 
-    # optimal_prices, optimal_cost, optimal_demands_fw, optimal_prices_fw, \
-    # optimal_cost_fw, optimal_penalty_fw, optimal_step = procedure(k1_optimal_scheduling, k1_optimal_fw)
-    # pricing_results = save_results(pricing_results, k1_optimal_scheduling, k1_optimal_fw,
-    #                                optimal_prices, optimal_cost,
-    #                                optimal_demands_fw, optimal_prices_fw, optimal_cost_fw, optimal_penalty_fw,
-    #                                optimal_step)
+        demands_fw1, step1, prices_fw1, cost_fw1, penalty_fw1 \
+            = pricing_step_size(pricing_table, demands_fw_pre, demands_new,
+                                penalty_fw_pre, penalty_new,
+                                cost_function_type, prices_fw_pre, cost_fw_pre)
+    else:
+        demands_fw1 = demands_new
+        prices_fw1 = prices1
+        cost_fw1 = cost1
+        penalty_fw1 = penalty_new
+        step1 = 1
 
-    return pricing_results
+    time_fw = time() - t_begin
+
+    return prices1, cost1, demands_fw1, prices_fw1, cost_fw1, penalty_fw1, step1, time_fw
 

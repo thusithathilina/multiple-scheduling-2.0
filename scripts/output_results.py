@@ -1,119 +1,74 @@
-from os import path, mkdir
-from datetime import date, datetime
 from shutil import copy
 import pickle
 import pandas as pd
 from scripts.input_parameter import *
 from scripts.cfunctions import average
-from json import dumps
+from pathlib import Path
 
 
-def aggregate_results(itr, res, key_params):
+def aggregate_results(itr, area_dt, key_params):
 
     def reduction(k0):
-        summary[k0 + " reduction"] = dict()
-        for alg2 in res[k0]:
-            summary[k0 + " reduction"][alg2] \
-                = round((res[k0][alg2][0] - res[k0][alg2][itr]) / res[k0][alg2][0], 2)
-
-    def save_key_parameters():
-        for param_k, param_v in key_params.items():
-            summary[param_k] = dict()
-            for alg3 in res[k0_demand]:
-                summary[param_k][alg3] = param_v
+        for alg2 in area_dt:
+            summary[alg2][k0 + " initial"] = area_dt[alg2][k0][0]
+            summary[alg2][k0 + " final"] = area_dt[alg2][k0][itr]
+            alg_reduction = (area_dt[alg2][k0][0] - area_dt[alg2][k0][itr]) / area_dt[alg2][k0][0]
+            summary[alg2][k0 + " reduction"] = "{:.2%}".format(round(alg_reduction, 3))
 
     summary = dict()
-    save_key_parameters()
+    for alg in area_dt:
+        summary[alg] = dict()
+        for param_k, param_v in key_params.items():
+            summary[alg][param_k] = param_v
+
     reduction(k0_demand_max)
     reduction(k0_par)
     reduction(k0_obj)
     reduction(k0_cost)
     reduction(k0_par)
 
-    summary["Average " + k0_time] = dict()
-    for alg in res[k0_time]:
-        summary["Average " + k0_time][alg] = round(average(res[k0_time][alg].values()), 3)
+    for alg in area_dt:
+        summary[alg]["Average " + k0_time] = round(average(list(area_dt[alg][k0_time].values())[1:]), 3)
 
-    return res, summary
+    return area_dt, summary
 
 
-def write_results(iterations, key_parameters, area_res, out_folder, note, alg_labels):
+def write_results(iterations, key_parameters, area_res, exp_folder, note, alg_labels):
 
     area_res, sum_dict = aggregate_results(iterations, area_res, key_parameters)
 
-    out_date_folder = out_folder + "{}/".format(str(date.today()))
-    out_date_time_folder = out_date_folder + "{}/"\
-        .format(str(datetime.now().time()).replace(":", "-").replace(".", "-"))
+    path_exp_folder = Path(exp_folder)
+    if not path_exp_folder.exists():
+        path_exp_folder.mkdir(mode=0o777, parents=True, exist_ok=False)
 
-    if not path.exists(out_folder):
-        mkdir(out_folder)
-    if not path.exists(out_date_folder):
-        mkdir(out_date_folder)
-    if not path.exists(out_date_time_folder):
-        mkdir(out_date_time_folder)
-
-    with open(out_date_time_folder + "summary" + '.txt', 'w+') as f:
+    with open(exp_folder + "note" + '.txt', 'w+') as f:
         f.write(note)
     f.close()
 
-    with open(out_date_time_folder + "area_output" + '.pkl', 'wb+') as f:
+    with open(exp_folder + "area_output" + '.pkl', 'wb+') as f:
         pickle.dump(area_res, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
-    with open(out_date_time_folder + "summary" + '.pkl', 'wb+') as f:
+    with open(exp_folder + "summary" + '.pkl', 'wb+') as f:
         pickle.dump(sum_dict, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
-    pd.DataFrame.from_dict(sum_dict, orient='index').to_csv(out_date_time_folder + "{}.csv".format("summary"))
+    def save_to_csv(data_dict, file_name):
+        pd.DataFrame.from_dict(data_dict, orient='index').to_csv(exp_folder + "{}.csv".format(file_name))
 
-    def dict_to_pd_dt(k0_ks, k1_ks):
-        for k0 in k0_ks:
-            if k0 in area_res:
-                for k1 in k1_ks:
-                    if k1 in area_res[k0]:
-                        df = pd.DataFrame.from_dict(area_res[k0][k1], orient='index')
-                        df.to_csv(out_date_time_folder + "{}-{}.csv".format(k0, k1))
-
-    def combine_dict_to_pd_dt(k0_ks, k1_schedule, k1_pricing):
-        for k1_s, k1_p in zip(k1_schedule, k1_pricing):
-            combined_dict = dict()
-            pd_columns = []
-            for k0 in k0_ks:
-                if k0 in area_res:
-                    if k1_s in area_res[k0] and k0 == k0_time:
-                        combined_dict[k1_time_scheduling] = area_res[k0][k1_s]
-                        combined_dict[k1_time_pricing] = area_res[k0][k1_p]
-                        pd_columns.extend([k1_time_scheduling, k1_time_pricing])
-                    elif k1_p in area_res[k0]:
-                        combined_dict[k0] = area_res[k0][k1_p]
-                        pd_columns.append(k0)
-            df = pd.DataFrame(combined_dict, columns=pd_columns)
-            df.to_csv(out_date_time_folder + "{}-{}.csv".format("others", k1_p))
-
-    k1_scheduling_keys = []
-    k1_pricing_fw_keys = []
-    for v in alg_labels.values():
-        k1_scheduling_keys.append(v[k2_scheduling])
-        k1_pricing_fw_keys.append(v[k2_pricing])
-
-    k0_keys = [k0_demand]
-    dict_to_pd_dt(k0_keys, k1_scheduling_keys)
-
-    k0_keys = [k0_demand, k0_prices]
-    dict_to_pd_dt(k0_keys, k1_pricing_fw_keys)
-
-    k0_keys = [k0_demand_max, k0_demand_total, k0_par, k0_obj, k0_cost, k0_penalty, k0_step, k0_time]
-    combine_dict_to_pd_dt(k0_keys, k1_scheduling_keys, k1_pricing_fw_keys)
+    save_to_csv(sum_dict, "summary")
+    for alg in area_res:
+        save_to_csv(area_res[alg][k0_demand], "{}-{}".format(alg, k0_demand))
+        save_to_csv(area_res[alg][k0_prices], "{}-{}".format(alg, k0_prices))
+        others_keys = {k0_demand_max, k0_demand_total, k0_par, k0_obj, k0_cost, k0_penalty, k0_step, k0_time}
+        others_dict = {k: area_res[alg][k] for k in area_res[alg].keys() & others_keys}
+        save_to_csv(others_dict, "{}-{}".format(alg, "others"))
 
     # copy the generated data
-    copy('data/area.pkl', out_date_time_folder + "area_input.pkl")
-    copy('data/households.pkl', out_date_time_folder + "households_input.pkl")
-    # pd.DataFrame.from_dict(households, orient='index') \
-    #     .to_csv(out_date_time_folder + "{}.csv".format("households"))
+    copy('data/area.pkl', exp_folder + "area_input.pkl")
+    copy('data/households.pkl', exp_folder + "households_input.pkl")
 
-    return out_date_time_folder
-
-
+    return sum_dict
 
 
 

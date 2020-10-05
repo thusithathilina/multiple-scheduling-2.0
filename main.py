@@ -3,7 +3,7 @@ import pandas as pd
 from bokeh.io import curdoc
 from bokeh.layouts import layout, column, row, grid
 from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select, Div, \
-    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Button, HoverTool, LinearColorMapper, ColorBar, BasicTicker, \
+    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Range1d, HoverTool, LinearColorMapper, ColorBar, BasicTicker, \
     PrintfTickFormatter
 from bokeh.plotting import figure
 from os import walk, path
@@ -58,6 +58,7 @@ def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_s, k1_p):
 def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_data, hover):
     p = figure(title=title, background_fill_color="#fafafa", plot_height=350,
                x_axis_label=x_label, y_axis_label=y_label)
+    p.y_range.start = 0
     p.line(x_data, top_data, source=source_data)
     p.circle(x_data, top_data, size=5, source=source_data, selection_color="orange")
     p.add_tools(hover)
@@ -93,8 +94,10 @@ def draw_demand_price_heatmap(source_heatmap, dtype, x_loc, colors):
     return p, chart, color_bar, mapper
 
 
-def make_data_tab():
-    radio_button_group = RadioButtonGroup(labels=["Summary", "Statistics", "Demand Profile", "Price Profile"], active=0)
+def make_overview_tab():
+    # labels = ["Summary", "Statistics", "Demand Profile", "Price Profile"]
+    labels = ["Summary", "Statistics"]
+    radio_button_group = RadioButtonGroup(labels=labels, active=0)
     source_datatable = ColumnDataSource()
     data_table = DataTable(source=source_datatable, index_position=None)
 
@@ -120,16 +123,6 @@ def make_graph_tab(s_combined, s_heatmap_demand, s_heatmap_price):
 
     plot_heatmap_price, chart_heatmap_price, color_bar_prices, mapper_price \
         = draw_demand_price_heatmap(s_heatmap_price, k0_prices, x_location, heatmap_colours)
-
-    # k1_algorithm = select_algorithm.value
-    # data = data_dict[dtype][k1_alg]
-    # x_periods = list(data.columns)
-    # y_iterations = [str(x) for x in (list(data.index))]
-    # data = data.iloc[::-1].stack().reset_index()
-    # data.columns = ['Iteration', 'Period', dtype]
-    # mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
-    # p = figure(title='{} Heatmap'.format(dtype), x_range=x_periods, y_range=y_iterations,
-    #            x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
     return {"line": {k0_cost: plot_line_cost, k0_demand_max: plot_line_demand_max},
             "heatmap": {"plot": {k0_demand: plot_heatmap_demand, k0_prices: plot_heatmap_price},
@@ -159,6 +152,22 @@ def make_header(date_folder, time_folder, res_folder):
     return date_picker, select_time, select_algorithm, div
 
 
+# def make_demand_price_tab(s_demands, s_prices):
+#     x_label = [str(i) for i in range(48)]
+#     # y_label = [str(i) for i in range(10)]
+#     p_demand = figure(title="Demand Profiles", background_fill_color="#fafafa", plot_height=600,
+#                       x_axis_label=x_label, y_axis_label=y_label)
+#     p_demand.line(x_data, top_data, source=source_data)
+#     p.circle(x_data, top_data, size=5, source=source_data, selection_color="orange")
+#     p.add_tools(hover)
+#
+#
+#     p_prices = figure(title="Prices Profiles", background_fill_color="#fafafa", plot_height=600,
+#                       x_axis_label=x_label, y_axis_label=y_label)
+#
+#     return p_demand, p_prices
+
+
 def view_results(date_folder, time_folder, res_folder):
     # ------------------------------ 1. draw widgets ------------------------------ #
     # 1.1 header
@@ -168,15 +177,15 @@ def view_results(date_folder, time_folder, res_folder):
 
     # 1.2 summary tab
 
-    # 1.3 data Tab
-    data_radio_button_group, data_table, source_datatable = make_data_tab()
+    # 1.3 overview Tab
+    data_radio_button_group, data_table, source_datatable = make_overview_tab()
     layout_data = layout([
         [data_radio_button_group],
         [data_table]
     ], sizing_mode='scale_width')
-    tab_data = Panel(child=layout_data, title='Data')
+    tab_data = Panel(child=layout_data, title='Overview')
 
-    # 1.4 graph Tab
+    # 1.4 cost, max demand, prices and demands tab
     source_combined = ColumnDataSource()
     source_heatmap_demand = ColumnDataSource()
     source_heatmap_price = ColumnDataSource()
@@ -198,9 +207,16 @@ def view_results(date_folder, time_folder, res_folder):
     row1 = row(plot_line_cost, plot_heatmap_demand)
     row2 = row(plot_line_demand_max, plot_heatmap_price)
     layout_graph = layout(column([row1, row2]), sizing_mode='stretch_both')
-    tab_graph = Panel(child=layout_graph, title='Graph')
+    tab_graph = Panel(child=layout_graph, title='Cost, Max demand, Demands and Prices')
 
-    # 1.5 overall layout all
+    # 1.5 demands and prices line charts
+    # source_line_demands = ColumnDataSource()
+    # source_line_prices = ColumnDataSource()
+    # plot_demands, plot_prices = make_demand_price_tab(source_line_demands, source_line_prices)
+    # layout_demands_prices = layout(row(plot_demands, plot_prices, sizing_mode='scale_both'))
+    # tab_demands_prices = Panel(child=layout_demands_prices, title='Demands and Prices')
+
+    # 1.6 overall layout all
     tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_both')
     layout_overall = layout([
         header_row,
@@ -232,7 +248,10 @@ def view_results(date_folder, time_folder, res_folder):
 
     def update_line_chart(chosen_algorithm):
         source_combined.data = others_combined_dict[chosen_algorithm]
+        # plot_line_cost.y_range = Range1d(0, int(source_combined.data[k0_cost].max() * 1.1))
         plot_line_cost.update()
+
+        # plot_line_demand_max.y_range = Range1d(0, int(source_combined.data[k0_demand_max].max() + 1))
         plot_line_demand_max.update()
 
     def update_data_table(active_radio_button, chosen_algorithm):
@@ -267,7 +286,7 @@ def view_results(date_folder, time_folder, res_folder):
         time_t = new_time
         date_time_folder = results_folder + "{}/{}/".format(date_t, time_t)
 
-        f = open(date_time_folder + 'summary.txt', 'r+')
+        f = open(date_time_folder + 'note.txt', 'r+')
         str_summary = f.read()
         f.close()
         header_note.text = str_summary

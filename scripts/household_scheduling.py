@@ -203,22 +203,10 @@ def household_optimal_solving \
     return actual_starts, optimal_demand_profile, obj, time
 
 
-def save_results(results, k1_algorithm_scheduling, return_dict):
-    results[k1_algorithm_scheduling] = dict()
-    results[k1_algorithm_scheduling][k0_starts] = return_dict[k0_starts]
-    results[k1_algorithm_scheduling][k0_demand] = return_dict[k0_demand]
-    results[k1_algorithm_scheduling][k0_obj] = return_dict[k0_obj]
-    results[k1_algorithm_scheduling][k0_penalty] = return_dict[k0_penalty]
-    results[k1_algorithm_scheduling][k0_time] = return_dict[k0_time]
-
-    return results
-
-
 def household_scheduling_subproblem \
                 (num_intervals, num_periods, num_intervals_periods,
-                 household, cf_weight, cf_max, area_prices, iteration,
-                 model_file, m_type, s_type, solver_choice, var_sel, val_cho, algorithm_label):
-
+                 household, cf_weight, cf_max, prices,
+                 model_file, m_type, s_type, solver_choice, var_sel, val_cho, k1_algorithm_scheduling):
     # extract household data
     demands = household["demands"]
     durations = household["durs"]
@@ -231,49 +219,33 @@ def household_scheduling_subproblem \
     succ_delays = household["succ_delays"]  # need to change this format when sending it to the solver
     no_precedences = household["no_prec"]
     max_demand = household["max", "limit"]
-    # todo for me - record household schedule per iteration
 
-    def procedure(k1_algorithm_scheduling, k1_algorithm_fw):
+    if len(prices) == num_periods:
+        prices = [int(p) for p in prices[:num_periods] for _ in range(num_intervals_periods)]
+    else:
+        prices = [int(p) for p in prices]
 
-        # the FW prices at iteration k - 1
-        prices = area_prices[k1_algorithm_fw][iteration - 1]
-        # todo - prices to be hacked
-        if len(prices) == num_periods:
-            prices = [int(p) for p in prices[:num_periods] for _ in range(num_intervals_periods)]
-        else:
-            prices = [int(p) for p in prices]
+    # data preprocessing
+    run_costs = data_preprocessing(num_intervals, demands, prices,
+                                   earliest_starts, latest_ends, durations, preferred_starts,
+                                   care_factors, cf_weight, cf_max)
 
-        # data preprocessing
-        run_costs = data_preprocessing(num_intervals, demands, prices,
-                                       earliest_starts, latest_ends, durations, preferred_starts,
-                                       care_factors, cf_weight, cf_max)
+    if "heuristic" in k1_algorithm_scheduling:
+        actual_starts, demands_new, obj, runtime \
+            = household_heuristic_solving(num_intervals, durations, demands, precedents, successors,
+                                          succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max)
 
-        if "heuristic" in k1_algorithm_scheduling:
-            actual_starts, demands_new, obj, runtime \
-                = household_heuristic_solving(num_intervals, durations, demands, precedents, successors,
-                                              succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max)
+    else:  # "optimal" in k1_algorithm
+        succ_delays2 = [x[0] for x in list(household["succ_delays"].values())]
+        search = "int_search(actual_starts, {}, {}, complete)".format(var_sel, val_cho)
+        actual_starts, demands_new, obj, runtime \
+            = household_optimal_solving(num_intervals, prices, preferred_starts, earliest_starts,
+                                        latest_ends, durations, demands, care_factors, no_precedences, precedents,
+                                        successors, succ_delays2, max_demand, model_file, solver_choice, m_type,
+                                        s_type, run_costs, search, cf_weight)
 
-        else:  # "optimal" in k1_algorithm
-            succ_delays2 = [x[0] for x in list(household["succ_delays"].values())]
-            search = "int_search(actual_starts, {}, {}, complete)".format(var_sel, val_cho)
-            actual_starts, demands_new, obj, runtime \
-                = household_optimal_solving(num_intervals, prices, preferred_starts, earliest_starts,
-                                            latest_ends, durations, demands, care_factors, no_precedences, precedents,
-                                            successors, succ_delays2, max_demand, model_file, solver_choice, m_type,
-                                            s_type, run_costs, search, cf_weight)
+    penalty = sum([abs(pst - ast) * cf_weight * cf for pst, ast, cf
+                   in zip(preferred_starts, actual_starts, care_factors)])
 
-        penalty = sum([abs(pst - ast) * cf_weight * cf for pst, ast, cf
-                       in zip(preferred_starts, actual_starts, care_factors)])
-
-        return {k0_starts: actual_starts, k0_demand: demands_new, k0_obj: obj, k0_penalty: penalty, k0_time: runtime}
-
-    rescheduling_results = dict()
-    key_scheduling = algorithm_label[k2_scheduling]
-    key_pricing_fw = algorithm_label[k2_pricing]
-    rescheduling_results = save_results(rescheduling_results, key_scheduling,
-                                        procedure(key_scheduling, key_pricing_fw))
-    # rescheduling_results = save_results(rescheduling_results, k1_optimal_scheduling,
-    #                                     procedure(k1_optimal_scheduling, k1_optimal_fw))
-
-    return rescheduling_results
+    return actual_starts, demands_new, obj, penalty, round(runtime, 3)
 
