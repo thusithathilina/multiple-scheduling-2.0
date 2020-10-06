@@ -36,7 +36,6 @@ def experiment(num_households, num_tasks_min, num_tasks_max, new_data, cost_type
 
     print("---------- Results ----------")
     key_parameters = {k0_tasks_no: num_tasks_min,
-                      k0_households_no: num_households,
                       k0_penalty_weight: care_f_weight,
                       k0_cost_type: cost_function_type}
     print("Key parameters saved...")
