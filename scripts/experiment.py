@@ -26,13 +26,12 @@ def experiment(num_households, num_tasks_min, num_tasks_max, new_data, cost_type
         = read_data(file_cp_pre, file_cp_ini, file_pricing_table, demand_level_scale, zero_digit)
     print("Pricing table created...")
 
-    print("---------- Iteration Begin! ----------")
-    num_iterations = 0
     for alg in algorithms_labels.values():
+        print("---------- Iteration Begin! ----------")
         area, str_summary, num_iterations \
             = iteration(area, households, pricing_table, cost_type, str_note, solvers, models, alg)
-    print("---------- Iteration Done! ----------")
-    print("Converged in {0} iteration".format(num_iterations))
+        print("---------- Iteration Done! ----------")
+        print("Converged in {0} iteration".format(num_iterations))
 
     print("---------- Results ----------")
     key_parameters = {k0_tasks_no: num_tasks_min,
