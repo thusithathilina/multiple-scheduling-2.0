@@ -33,6 +33,8 @@
 *.txss
 *.md
 *.txt
+*.pyc
+scripts/*.pyc
 
 # Mac IDE files
 *.swp
