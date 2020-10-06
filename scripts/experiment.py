@@ -40,7 +40,7 @@ def experiment(num_households, num_tasks_min, num_tasks_max, new_data, cost_type
                       k0_cost_type: cost_function_type}
     print("Key parameters saved...")
 
-    exp_summary = write_results(num_iterations, key_parameters, area, experiment_folder, str_note, algorithms_labels)
+    exp_summary = write_results(key_parameters, area, experiment_folder, str_note)
     print("Results saved to files...")
     return exp_summary
 

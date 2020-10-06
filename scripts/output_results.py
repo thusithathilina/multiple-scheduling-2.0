@@ -6,13 +6,15 @@ from scripts.cfunctions import average
 from pathlib import Path
 
 
-def aggregate_results(itr, area_dt, key_params):
+def aggregate_results(area_dt, key_params):
 
     def reduction(k0):
         for alg2 in area_dt:
-            summary[alg2][k0 + " initial"] = area_dt[alg2][k0][0]
-            summary[alg2][k0 + " final"] = area_dt[alg2][k0][itr]
-            alg_reduction = (area_dt[alg2][k0][0] - area_dt[alg2][k0][itr]) / area_dt[alg2][k0][0]
+            init_value = area_dt[alg2][k0][0]
+            final_value = list(area_dt[alg2][k0].values())[-1]
+            alg_reduction = (init_value - final_value) / init_value
+            summary[alg2][k0 + " initial"] = init_value
+            summary[alg2][k0 + " final"] = final_value
             summary[alg2][k0 + " reduction"] = "{:.2%}".format(round(alg_reduction, 3))
 
     summary = dict()
@@ -33,9 +35,9 @@ def aggregate_results(itr, area_dt, key_params):
     return area_dt, summary
 
 
-def write_results(iterations, key_parameters, area_res, exp_folder, note, alg_labels):
+def write_results(key_parameters, area_res, exp_folder, note):
 
-    area_res, sum_dict = aggregate_results(iterations, area_res, key_parameters)
+    area_res, sum_dict = aggregate_results(area_res, key_parameters)
 
     path_exp_folder = Path(exp_folder)
     if not path_exp_folder.exists():

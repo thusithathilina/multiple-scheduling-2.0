@@ -3,8 +3,8 @@ from datetime import date, datetime
 import pandas as pd
 
 
-repeat_num = 3
-household_nums = [10, 50, 100]
+repeat_num = 2
+household_nums = [10, 20]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
