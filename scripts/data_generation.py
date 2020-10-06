@@ -57,10 +57,12 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
     e_start = 0
 
     # generation - latest finish time
-    l_finish = r.randint(p_start + duration, num_intervals - 1 + duration)
+    # l_finish = r.randint(p_start + duration, num_intervals - 1 + duration)
+    l_finish = num_intervals - 1 + duration
 
     # generation - care factor
-    care_f = int(r.choice([i for i in range(cf_max + 1)]))
+    # care_f = int(r.choice([i for i in range(1, cf_max + 1)]))
+    care_f = r.randint(1, cf_max + 1)
 
     return demand, duration, p_start, e_start, l_finish, care_f
 
@@ -128,11 +130,9 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             precedors[task].append(previous)
             succ_delays[task].append(delay)
 
-    for t in range(num_tasks, num_tasks):
+    for t in range(2, num_tasks):
         if r.choice([True, False]):
-        # if True:
             previous_tasks = list(range(t))
-            # previous_tasks.reverse()
             r.shuffle(previous_tasks)
             for prev in previous_tasks:
                 if preferred_starts[prev] + durations[prev] - 1 < preferred_starts[t] \
@@ -143,7 +143,6 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
                         succeding_delay = num_intervals - 1
                         add_precedes(t, prev, succeding_delay)
                         no_precedences += 1
-
                         break
                     else:
                         # find all precedors of this previous task
@@ -215,7 +214,6 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
     par = round(max_demand / average(area_demand_profile2), 2)
     area = dict()
     for k1, v1 in algorithms_labels.items():
-        # area[k1] = dict()
         for v2 in v1.values():
             area[v2] = dict()
             area[v2][k0_demand] = dict()

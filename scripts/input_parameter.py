@@ -5,15 +5,15 @@ no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
 new_households = True
-new_households = False
+# new_households = False
 no_households = 100
-no_tasks_min = 5
+no_tasks_min = 10
 max_demand_multiplier = no_tasks_min
 care_f_max = 10
-care_f_weight = 1
+care_f_weight = 10
 
 # pricing related parameters
-pricing_table_weight = 1.0
+pricing_table_weight = 0.9
 # cost_function_type = "linear"
 cost_function_type = "piece-wise"
 zero_digit = 2

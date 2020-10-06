@@ -44,9 +44,9 @@ def iteration(area, households, pricing_table, cost_type, str_summary, solvers, 
 
     # 1.2 - initialise tracker values: objective values, costs, penalties, steps and the run times
     area = update_area_data(area, 0, key_scheduling, None, prices,
-                            cost, cost, None, step_fw, 0)
+                            cost, cost, 0, step_fw, 0)
     area = update_area_data(area, 0, key_pricing_fw, demands_fw, prices_fw,
-                            cost_fw, cost_fw, penalty_fw, step_fw, 0)
+                            cost_fw + penalty_fw, cost_fw, penalty_fw, step_fw, 0)
     print("The demand profile, prices, the cost, the step, and the run time initialised...")
 
     # 2 - iterations
@@ -81,13 +81,13 @@ def iteration(area, households, pricing_table, cost_type, str_summary, solvers, 
             obj_area += obj_household
             penalty_area += penalty_household
             time_scheduling_iteration += time_household
-            print("household {0} at iteration {1} using {2}".format(key, itr, key_scheduling))
+            if key % 10 == 0:
+                print("household {0} at iteration {1} using {2}".format(key, itr, key_scheduling))
 
         # 2.2 - save the rescheduled results
         demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]
         area = update_area_data(area, itr, key_scheduling, demands, None,
-                                obj_area, obj_area - penalty_area, penalty_area,
-                                None, time_scheduling_iteration)
+                                None, None, penalty_area, None, time_scheduling_iteration)
 
         # ------------------------------ 2. pricing step ------------------------------ #
         # 2.1 - apply the FW algorithm to calculate the prices, the step size and the cost
@@ -97,9 +97,8 @@ def iteration(area, households, pricing_table, cost_type, str_summary, solvers, 
         print("step size at iteration {0}  = {1} computed by {2}".format(itr, step_fw, key_pricing_fw))
 
         # 2.3 - save pricing results
-        area = update_area_data(area, itr, key_scheduling,
-                                None, prices,
-                                None, None, None, step_fw, None)
+        area = update_area_data(area, itr, key_scheduling, None, prices,
+                                cost + penalty_area, cost, None, step_fw, None)
         area = update_area_data(area, itr, key_pricing_fw,
                                 demands_fw, prices_fw,
                                 cost_fw + penalty_fw, cost_fw, penalty_fw,

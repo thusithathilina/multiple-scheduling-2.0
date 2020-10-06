@@ -15,7 +15,7 @@ def aggregate_results(area_dt, key_params):
             alg_reduction = (init_value - final_value) / init_value
             summary[alg2][k0 + " initial"] = init_value
             summary[alg2][k0 + " final"] = final_value
-            summary[alg2][k0 + " reduction"] = "{:.2%}".format(round(alg_reduction, 3))
+            summary[alg2][k0 + " reduction"] = round(alg_reduction, 3)
 
     summary = dict()
     for alg in area_dt:

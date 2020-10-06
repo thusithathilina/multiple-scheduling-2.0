@@ -3,8 +3,8 @@ from datetime import date, datetime
 import pandas as pd
 
 
-repeat_num = 5
-household_nums = [1000, 5000, 10000, 15000, 20000]
+repeat_num = 1
+household_nums = [50, 100]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
@@ -25,8 +25,8 @@ date_time_folder = date_folder + "{}/".format(this_time)
 
 experiment_summary_dict = dict()
 group_by_columns = [k0_households_no, k0_tasks_no, "algorithm", k0_penalty_weight, k0_cost_type]
-for r in range(repeat_num):
-    for n in household_nums:
+for n in household_nums:
+    for r in range(repeat_num):
         date_time_experiment_folder = date_time_folder \
                                       + "h{0}-t{1}-w{2}-r{3}/".format(n, no_tasks_min, care_f_weight, r)
 
