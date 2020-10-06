@@ -19,7 +19,10 @@ def aggregate_results(area_dt, key_params):
 
     summary = dict()
     for alg in area_dt:
+        all_run_times = list(area_dt[alg][k0_time].values())[1:]
         summary[alg] = dict()
+        summary[alg]["Average " + k0_time] = round(average(all_run_times), 3)
+        summary[alg]["No_iterations"] = len(all_run_times)
         for param_k, param_v in key_params.items():
             summary[alg][param_k] = param_v
 
@@ -28,9 +31,6 @@ def aggregate_results(area_dt, key_params):
     reduction(k0_obj)
     reduction(k0_cost)
     reduction(k0_par)
-
-    for alg in area_dt:
-        summary[alg]["Average " + k0_time] = round(average(list(area_dt[alg][k0_time].values())[1:]), 3)
 
     return area_dt, summary
 
