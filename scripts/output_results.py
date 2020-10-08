@@ -4,6 +4,7 @@ import pandas as pd
 from scripts.input_parameter import *
 from scripts.cfunctions import average
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 
 def aggregate_results(area_dt, key_params):
@@ -56,15 +57,29 @@ def write_results(key_parameters, area_res, exp_folder, note):
     f.close()
 
     def save_to_csv(data_dict, file_name):
-        pd.DataFrame.from_dict(data_dict, orient='index').to_csv(exp_folder + "{}.csv".format(file_name))
+        df = pd.DataFrame.from_dict(data_dict, orient='index')
+        df.to_csv(exp_folder + "{}.csv".format(file_name))
+        return df
 
-    save_to_csv(sum_dict, "summary")
+    def draw_graphs(df, f_name):
+
+        if "other" in f_name:
+            True
+        else:
+            lines = df.T.plot.line()
+            lines.figure.savefig(exp_folder + "{}.png".format(f_name))
+
+    df_summary = save_to_csv(sum_dict, "summary")
     for alg in area_res:
-        save_to_csv(area_res[alg][k0_demand], "{}-{}".format(alg, k0_demand))
-        save_to_csv(area_res[alg][k0_prices], "{}-{}".format(alg, k0_prices))
         others_keys = {k0_demand_max, k0_demand_total, k0_par, k0_obj, k0_cost, k0_penalty, k0_step, k0_time}
         others_dict = {k: area_res[alg][k] for k in area_res[alg].keys() & others_keys}
-        save_to_csv(others_dict, "{}-{}".format(alg, "others"))
+        df_others = save_to_csv(others_dict, "{}-{}".format(alg, "others"))
+        df_demands = save_to_csv(area_res[alg][k0_demand], "{}-{}".format(alg, k0_demand))
+        df_prices = save_to_csv(area_res[alg][k0_prices], "{}-{}".format(alg, k0_prices))
+
+        draw_graphs(df_demands, "{}-{}".format(alg, k0_demand))
+        draw_graphs(df_prices, "{}-{}".format(alg, k0_prices))
+        draw_graphs(df_others, "{}-{}".format(alg, "others"))
 
     # copy the generated data
     copy('data/area.pkl', exp_folder + "area_input.pkl")
