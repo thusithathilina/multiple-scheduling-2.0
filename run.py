@@ -4,7 +4,7 @@ import pandas as pd
 
 
 repeat_num = 1
-household_nums = [50, 100]
+household_nums = [100]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
@@ -39,7 +39,8 @@ for n in household_nums:
         # write experiment summary
         experiment_summary_pd = pd.DataFrame.from_dict(experiment_summary_dict, orient='index')
         experiment_summary_pd.reset_index(drop=True)
-        experiment_summary_pd.index.names = ["repeat", "no_households", "algorithm"]
+        experiment_summary_pd.index.names = ["repeat", "drop", "algorithm"]
+        experiment_summary_pd.drop(["drop"])
         experiment_summary_pd.to_csv(date_time_folder + "{}_summary.csv".format(this_time))
         experiment_summary_pd.groupby(group_by_columns).mean()\
             .to_csv(date_time_folder + "{}_overview.csv".format(this_time))
