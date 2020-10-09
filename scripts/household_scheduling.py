@@ -1,6 +1,7 @@
 import timeit
 from minizinc import *
 import random as r
+from scripts.input_parameter import *
 
 
 def data_preprocessing(num_intervals, demands, prices_day, earliest_starts, latest_ends, durations,
@@ -203,7 +204,7 @@ def household_optimal_solving \
 
 
 def household_scheduling_subproblem \
-                (num_intervals, num_periods, num_intervals_periods,
+                (key, num_intervals, num_periods, num_intervals_periods,
                  household, cf_weight, cf_max, prices,
                  model_file, m_type, s_type, solver_choice, var_sel, val_cho, k1_algorithm_scheduling):
     # extract household data
@@ -246,5 +247,10 @@ def household_scheduling_subproblem \
     penalty = sum([abs(pst - ast) * cf_weight * cf for pst, ast, cf
                    in zip(preferred_starts, actual_starts, care_factors)])
 
-    return actual_starts, demands_new, obj, penalty, round(runtime, 3)
+    if key % 10 == 0:
+        print("Household {} rescheduled by {}".format(key, k1_algorithm_scheduling))
 
+    # household[k0_starts] = actual_starts
+
+    return {k0_household_key: key, k0_starts: actual_starts, k0_demand: demands_new, k0_obj: obj, k0_penalty: penalty,
+            k0_time: round(runtime, 3)}

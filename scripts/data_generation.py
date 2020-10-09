@@ -198,6 +198,9 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         households[household_key]["max", "limit"] = max_demand
 
         households[household_key][k0_starts] = dict()
+        households[household_key][k0_cost] = dict()
+        households[household_key][k0_penalty] = dict()
+        households[household_key][k0_obj] = dict()
 
         for k in algorithms_labels.keys():
             households[household_key][k0_starts][k] = dict()

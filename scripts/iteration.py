@@ -3,6 +3,7 @@ from scripts.household_scheduling import *
 from scripts.drsp_pricing import *
 from scripts.input_parameter import *
 from scripts.cfunctions import *
+import multiprocessing as mp
 
 
 def update_data(r_dict, itr, k1_alg, d, k0):
@@ -14,7 +15,6 @@ def update_data(r_dict, itr, k1_alg, d, k0):
 
 
 def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, penalty, step_size, time):
-
     if demands is not None:
         max_demand = max(demands)
         area_dict[k1_algorithm][k0_demand][i] = demands
@@ -33,7 +33,6 @@ def update_area_data(area_dict, i, k1_algorithm, demands, prices, obj, cost, pen
 
 
 def iteration(area, households, pricing_table, cost_type, str_summary, solvers, models, algorithm_label):
-
     key_scheduling = algorithm_label[k2_scheduling]
     key_pricing_fw = algorithm_label[k2_pricing]
 
@@ -65,24 +64,31 @@ def iteration(area, households, pricing_table, cost_type, str_summary, solvers, 
         penalty_area = 0
 
         # 2.1 - reschedule given the prices at iteration k - 1
-        for key, household in households.items():
-            # 2.1.1 - reschedule a household
-            prices_fw_pre = area[key_pricing_fw][k0_prices][itr - 1]
-            starts_household, demands_household, obj_household, penalty_household, time_household \
-                = household_scheduling_subproblem(no_intervals, no_periods, no_intervals_periods,
-                                                  household, care_f_weight, care_f_max, prices_fw_pre,
-                                                  model_file, model_type,
-                                                  solver_type, solver_choice, var_selection, val_choice,
-                                                  key_scheduling)
+        prices_fw_pre = area[key_pricing_fw][k0_prices][itr - 1]
+        pool = mp.Pool()
+        reschedule_results = pool.starmap(household_scheduling_subproblem,
+                                          [(key, no_intervals, no_periods, no_intervals_periods,
+                                            household, care_f_weight, care_f_max, prices_fw_pre,
+                                            model_file, model_type,
+                                            solver_type, solver_choice, var_selection, val_choice,
+                                            key_scheduling) for key, household in households.items()])
+        pool.close()
+        pool.join()
 
-            # 2.1.2 - update the area data trackers: demand profile, total objective value, total penalty and run time
+        for result in reschedule_results:
+            key = result[k0_household_key]
+            starts_household = result[k0_starts]
+            demands_household = result[k0_demand]
+            obj_household = result[k0_obj]
+            penalty_household = result[k0_penalty]
+            time_household = result[k0_time]
+
+            # 2.1.2 - update the area trackers: demand profile, total objective value, total penalty and run time
             households[key][k0_starts][key_scheduling][itr] = starts_household
             demands_area_scheduling = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
             obj_area += obj_household
             penalty_area += penalty_household
             time_scheduling_iteration += time_household
-            if key % 10 == 0:
-                print("household {0} at iteration {1} using {2}".format(key, itr, key_scheduling))
 
         # 2.2 - save the rescheduled results
         demands = [sum(x) for x in grouper(demands_area_scheduling, no_intervals_periods)]

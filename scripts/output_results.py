@@ -9,6 +9,58 @@ from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models import ColumnDataSource
 
 
+def write_batch_experiment_summary(exp_summary_dt, group_by_cols, dt_folder, time):
+
+    def draw_run_time_graph(df):
+
+        plots = []
+        for alg in set(df[k0_algorithm].values):
+            alg_name = alg
+            alg_type = "scheduling"
+            if "fw" in alg:
+                alg_name = "FW"
+                alg_type = "pricing"
+            elif "heuristic" in alg:
+                alg_name = "OGSA"
+            elif "optimal" in alg:
+                alg_name = "Optimisation model"
+
+            df_selected = df.loc[lambda df2: df[k0_algorithm] == alg, lambda df2: [k0_households_no, k1_time_average]]
+            df_selected = df_selected.set_index(k0_households_no)
+            p_line_time = df_selected.plot_bokeh(
+                kind="line",
+                title="Average run time of {} per iteration, {}".format(alg_type, alg_name),
+                xlabel="Number of Households",
+                ylabel="Run time (seconds)",
+                show_figure=False,
+                sizing_mode="scale_width",
+
+            )
+            p_line_time.legend.location = "top_left"
+            p_circle_time = df_selected.plot_bokeh(
+                kind="point",
+                show_figure=False,
+            )
+            # p_line_time.renderers.append(p_circle_time.renderers[0])
+            plots.append(p_line_time)
+
+        pandas_bokeh.output_file("{}run_time.html".format(dt_folder))
+        grid = pandas_bokeh.plot_grid(plots, ncols=2, show_plot=False)
+        pandas_bokeh.save(grid)
+
+    experiment_summary_pd = pd.DataFrame.from_dict(exp_summary_dt, orient='index')
+    experiment_summary_pd.index.names = ["repeat", "drop", k0_algorithm]
+    experiment_summary_pd = experiment_summary_pd.reset_index()
+    experiment_summary_pd = experiment_summary_pd.drop(columns=["drop"])
+    experiment_summary_pd.to_csv(dt_folder + "{}_summary.csv".format(time))
+
+    experiment_overview_pd = experiment_summary_pd.groupby(group_by_cols).mean()
+    experiment_overview_pd.to_csv(dt_folder + "{}_overview.csv".format(time))
+
+    df_runtime = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k1_time_average]]
+    draw_run_time_graph(df_runtime)
+
+
 def aggregate_results(area_dt, key_params):
 
     def reduction(k0):
@@ -24,7 +76,7 @@ def aggregate_results(area_dt, key_params):
     for alg in area_dt:
         all_run_times = list(area_dt[alg][k0_time].values())[1:]
         summary[alg] = dict()
-        summary[alg]["Average " + k0_time] = round(average(all_run_times), 3)
+        summary[alg][k1_time_average] = round(average(all_run_times), 3)
         summary[alg]["No_iterations"] = len(all_run_times)
         for param_k, param_v in key_params.items():
             summary[alg][param_k] = param_v
@@ -39,7 +91,7 @@ def aggregate_results(area_dt, key_params):
 
 
 def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folder):
-    df_summary.index.names = ["algorithm"]
+    df_summary.index.names = [k0_algorithm]
     df_summary = df_summary.reset_index()
     data_table_summary = DataTable(
         columns=[TableColumn(field=Ci, title=Ci) for Ci in df_summary.columns],
@@ -70,15 +122,15 @@ def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folde
             alg_name = "Optimisation model and FW"
         if 'fw' in alg:
             df_cost = df_others_dt[alg].T[k0_cost].div(100)
-            # p_line_cost = df_cost.plot_bokeh(
-            #     kind="line",
-            #     title="Costs, {}".format(alg_name),
-            #     xlabel="Iteration",
-            #     ylabel="Costs",
-            #     show_figure=False,
-            #     marker="circle",
-            # )
-            # p_line_cost.plot_height = p_height
+            p_line_cost = df_cost.plot_bokeh(
+                kind="line",
+                title="Costs, {}".format(alg_name),
+                xlabel="Iteration",
+                ylabel="Costs",
+                show_figure=False,
+                marker="circle",
+            )
+            p_line_cost.plot_height = p_height
 
             p_line_demand = df_demands_dt[alg].T.plot_bokeh(
                 kind="line",
@@ -118,7 +170,7 @@ def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folde
 
     pandas_bokeh.output_file("{}plots.html".format(exp_folder))
     layout = pandas_bokeh.layout(rows, sizing_mode='scale_width')
-    pandas_bokeh.show(layout)
+    pandas_bokeh.save(layout)
 
 
 def write_results(key_parameters, area_res, exp_folder, note):
