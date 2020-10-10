@@ -40,6 +40,7 @@ k0_penalty_weight = "penalty_weight"
 k0_households_no = "no_households"
 k0_tasks_no = "no_tasks"
 k0_cost_type = "cost_function_type"
+k0_iteration_no = "no_iterations"
 
 # demand related parameters
 k0_household_key = "key"
@@ -66,7 +67,7 @@ k0_demand_table = "demand_levels"
 k0_time = "run_time"
 k1_time_scheduling = "rescheduling_time"
 k1_time_pricing = "pricing_time"
-k1_time_average = "average_run_time"
+k1_time_average = "average_run_time_per_iteration"
 
 # k1_interval = "interval"
 # k1_period = "period"

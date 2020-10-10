@@ -6,45 +6,49 @@ from scripts.cfunctions import average
 from pathlib import Path
 import pandas_bokeh
 from bokeh.models.widgets import DataTable, TableColumn
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, NumeralTickFormatter
 
 
 def write_batch_experiment_summary(exp_summary_dt, group_by_cols, dt_folder, time):
 
-    def draw_run_time_graph(df):
+    def draw_graph(df, key_selected):
 
         plots = []
-        for alg in set(df[k0_algorithm].values):
+        result_type_name = key_selected.replace("_", " ").capitalize()
+        for alg in set(sorted(df[k0_algorithm].values)):
             alg_name = alg
             alg_type = "scheduling"
-            if "fw" in alg:
-                alg_name = "FW"
-                alg_type = "pricing"
-            elif "heuristic" in alg:
+            if "heuristic" in alg:
                 alg_name = "OGSA"
             elif "optimal" in alg:
                 alg_name = "Optimisation model"
+            if "fw" in alg:
+                alg_name += " with FW"
+                alg_type = "pricing"
 
-            df_selected = df.loc[lambda df2: df[k0_algorithm] == alg, lambda df2: [k0_households_no, k1_time_average]]
+            df_selected = df.loc[lambda df2: df[k0_algorithm] == alg, lambda df2: [k0_households_no, key_selected]]
             df_selected = df_selected.set_index(k0_households_no)
-            p_line_time = df_selected.plot_bokeh(
+            y_label = ""
+            if "time" in key_selected:
+                y_label = "Run time (seconds)"
+            elif "iteration" in key_selected:
+                y_label = "Iteration"
+            elif "reduction" in key_selected:
+                y_label = key_selected.replace("_", " ").capitalize()
+            p_line = df_selected.plot_bokeh(
                 kind="line",
-                title="Average run time of {} per iteration, {}".format(alg_type, alg_name),
+                title="{} of {}, {}" .format(result_type_name, alg_type, alg_name),
                 xlabel="Number of Households",
-                ylabel="Run time (seconds)",
+                ylabel=y_label,
                 show_figure=False,
                 sizing_mode="scale_width",
-
             )
-            p_line_time.legend.location = "top_left"
-            p_circle_time = df_selected.plot_bokeh(
-                kind="point",
-                show_figure=False,
-            )
-            # p_line_time.renderers.append(p_circle_time.renderers[0])
-            plots.append(p_line_time)
+            if "reduction" in key_selected:
+                p_line.yaxis.formatter = NumeralTickFormatter(format='0 %')
+            p_line.legend.location = "top_left"
+            plots.append(p_line)
 
-        pandas_bokeh.output_file("{}run_time.html".format(dt_folder))
+        pandas_bokeh.output_file("{}{}.html".format(dt_folder, result_type_name))
         grid = pandas_bokeh.plot_grid(plots, ncols=2, show_plot=False)
         pandas_bokeh.save(grid)
 
@@ -58,7 +62,15 @@ def write_batch_experiment_summary(exp_summary_dt, group_by_cols, dt_folder, tim
     experiment_overview_pd.to_csv(dt_folder + "{}_overview.csv".format(time))
 
     df_runtime = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k1_time_average]]
-    draw_run_time_graph(df_runtime)
+    draw_graph(df_runtime, k1_time_average)
+    df_iterations = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k0_iteration_no]]
+    draw_graph(df_iterations, k0_iteration_no)
+    df_iterations = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k0_demand_max+ " reduction"]]
+    draw_graph(df_iterations, k0_demand_max+ " reduction")
+    df_iterations = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k0_par+ " reduction"]]
+    draw_graph(df_iterations, k0_par+ " reduction")
+    df_iterations = experiment_overview_pd.reset_index()[[k0_households_no, k0_algorithm, k0_cost+ " reduction"]]
+    draw_graph(df_iterations, k0_cost+ " reduction")
 
 
 def aggregate_results(area_dt, key_params):
@@ -77,7 +89,7 @@ def aggregate_results(area_dt, key_params):
         all_run_times = list(area_dt[alg][k0_time].values())[1:]
         summary[alg] = dict()
         summary[alg][k1_time_average] = round(average(all_run_times), 3)
-        summary[alg]["No_iterations"] = len(all_run_times)
+        summary[alg][k0_iteration_no] = len(all_run_times)
         for param_k, param_v in key_params.items():
             summary[alg][param_k] = param_v
 
