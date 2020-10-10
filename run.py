@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 
 repeat_num = 2
-household_nums = [2000, 4000, 8000, 10000]
+household_nums = [10000]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
