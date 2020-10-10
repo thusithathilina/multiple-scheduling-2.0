@@ -204,10 +204,11 @@ def household_optimal_solving \
 
 
 def household_scheduling_subproblem \
-                (key, num_intervals, num_periods, num_intervals_periods,
+                (num_intervals, num_periods, num_intervals_periods,
                  household, cf_weight, cf_max, prices,
                  model_file, m_type, s_type, solver_choice, var_sel, val_cho, k1_algorithm_scheduling):
     # extract household data
+    key = household[k0_household_key]
     demands = household["demands"]
     durations = household["durs"]
     earliest_starts = household["ests"]

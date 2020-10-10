@@ -130,7 +130,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             precedors[task].append(previous)
             succ_delays[task].append(delay)
 
-    for t in range(2, num_tasks):
+    for t in range(int(num_tasks / 2), num_tasks):
         if r.choice([True, False]):
             previous_tasks = list(range(t))
             r.shuffle(previous_tasks)
@@ -183,6 +183,7 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         household_key = h
         households[household_key] = dict()
 
+        households[household_key][k0_household_key] = household_key
         households[household_key]["demands"] = demands
         households[household_key]["durs"] = durations
         households[household_key]["ests"] = earliest_starts

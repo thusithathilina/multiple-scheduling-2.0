@@ -165,3 +165,50 @@
 #                                           model_file, model_type,
 #                                           solver_type, solver_choice, var_selection, val_choice,
 #                                           key_scheduling)
+# with concurrent.futures.ProcessPoolExecutor() as executor:
+#     reschedule_results = {
+#         executor.submit(household_scheduling_subproblem, no_intervals, no_periods, no_intervals_periods,
+#                         household, care_f_weight, care_f_max, prices_fw_pre,
+#                         model_file, model_type,
+#                         solver_type, solver_choice, var_selection, val_choice,
+#                         key_scheduling): household for household in households.items()}
+#
+#     for item in concurrent.futures.as_completed(reschedule_results):
+#         result = reschedule_results[item][1]
+#         key = result[k0_household_key]
+#         starts_household = result[k0_starts]
+#         demands_household = result[k0_demand]
+#         obj_household = result[k0_obj]
+#         penalty_household = result[k0_penalty]
+#         time_household = result[k0_time]
+#
+#         # 2.1.2 - update the area trackers: demand profile, total objective value, total penalty and run time
+#         households[key][k0_starts][key_scheduling][itr] = starts_household
+#         demands_area_scheduling = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
+#         obj_area += obj_household
+#         penalty_area += penalty_household
+#         time_scheduling_iteration += time_household
+
+# reschedule_results = pool.starmap(household_scheduling_subproblem,
+#                                   [(no_intervals, no_periods, no_intervals_periods,
+#                                     household, care_f_weight, care_f_max, prices_fw_pre,
+#                                     model_file, model_type,
+#                                     solver_type, solver_choice, var_selection, val_choice,
+#                                     key_scheduling) for household in households.items()])
+# pool.close()
+# pool.join()
+#
+# for result in reschedule_results:
+#     key = result[k0_household_key]
+#     starts_household = result[k0_starts]
+#     demands_household = result[k0_demand]
+#     obj_household = result[k0_obj]
+#     penalty_household = result[k0_penalty]
+#     time_household = result[k0_time]
+#
+#     # 2.1.2 - update the area trackers: demand profile, total objective value, total penalty and run time
+#     households[key][k0_starts][key_scheduling][itr] = starts_household
+#     demands_area_scheduling = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
+#     obj_area += obj_household
+#     penalty_area += penalty_household
+#     time_scheduling_iteration += time_household

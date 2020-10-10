@@ -7,7 +7,7 @@ no_intervals_periods = int(no_intervals / no_periods)
 new_households = True
 # new_households = False
 no_households = 100
-no_tasks_min = 6
+no_tasks_min = 5
 max_demand_multiplier = no_tasks_min
 care_f_max = 10
 care_f_weight = 1
@@ -42,7 +42,7 @@ k0_tasks_no = "no_tasks"
 k0_cost_type = "cost_function_type"
 
 # demand related parameters
-k0_household_key = "household_key"
+k0_household_key = "key"
 k0_starts = "start_times"
 k0_demand = "demands"
 k0_demand_max = "max_demand"
