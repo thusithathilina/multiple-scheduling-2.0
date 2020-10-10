@@ -3,8 +3,8 @@ from scripts.output_results import write_batch_experiment_summary
 from datetime import date, datetime
 
 
-repeat_num = 1
-household_nums = [50, 100]
+repeat_num = 5
+household_nums = [2000, 4000, 6000, 8000, 10000]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
