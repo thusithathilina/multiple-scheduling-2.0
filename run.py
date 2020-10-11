@@ -4,11 +4,11 @@ from datetime import date, datetime
 
 
 repeat_num = 2
-# household_nums = [1000, 5000, 10000, 15000, 2000]
+household_nums = [2000, 4000, 6000, 8000, 10000]
 # household_nums = household_nums.reverse()
-household_nums = [10000]
-# new_data = True
-new_data = False
+# household_nums = [10000]
+new_data = True
+# new_data = False
 type_cost_function = "piece-wise"
 # type_cost_function = "linear"
 

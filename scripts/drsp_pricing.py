@@ -53,8 +53,13 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
             if dd != 0:
                 try:
                     dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp)
-                    step = round((dl - dp) / dd, 3)
-                    step = step if step > 0.001 else 0.001
+                    step = round((dl - dp) / dd, 2)
+                    if d_levels[0] < dl < d_levels[-1] and step < 0.01:
+                        dp2 = dl
+                        dl = find_ge(d_levels, dp2 + 1) + 0.01 if dd > 0 else find_le(d_levels, dp2 - 1)
+                        step = round((dl - dp) / dd, 2)
+                    else:
+                        step = max(0.01, step)
                 except ValueError:
                     pass
             step_profile.append(step)
