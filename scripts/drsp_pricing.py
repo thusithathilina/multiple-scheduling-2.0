@@ -41,6 +41,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
     demand_profile_fw = demand_profile_pre[:]
     demand_profile_fw_pre = demand_profile_pre[:]
     best_step_size = 0
+    min_step_size = 0.005
     gradient = -999
     counter = 0
     while gradient < 0 and best_step_size < 1:
@@ -54,12 +55,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
                 try:
                     dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp)
                     step = round((dl - dp) / dd, 2)
-                    if d_levels[0] < dl < d_levels[-1] and step < 0.01:
-                        dp2 = dl
-                        dl = find_ge(d_levels, dp2 + 1) + 0.01 if dd > 0 else find_le(d_levels, dp2 - 1)
-                        step = round((dl - dp) / dd, 2)
-                    else:
-                        step = max(0.01, step)
+                    step = max(step, min_step_size)
                 except ValueError:
                     pass
             step_profile.append(step)

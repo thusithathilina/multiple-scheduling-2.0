@@ -3,8 +3,9 @@ from scripts.output_results import write_batch_experiment_summary
 from datetime import date, datetime
 
 
-repeat_num = 2
+repeat_num = 1
 household_nums = [2000, 4000, 6000, 8000, 10000]
+# household_nums = [200, 400]
 # household_nums = household_nums.reverse()
 # household_nums = [10000]
 new_data = True

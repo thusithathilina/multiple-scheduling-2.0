@@ -136,7 +136,7 @@ def household_heuristic_solving(num_intervals, durations, demands, predecessors,
                 a_start = min(max_demand_starts, key=max_demand_starts.get)
 
         except ValueError:
-            print("No feasible intervals left for task", task_id)
+            # print("No feasible intervals left for task", task_id)
             a_start = preferred_starts[task_id]
 
         actual_starts.append(a_start)
