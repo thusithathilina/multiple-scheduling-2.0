@@ -41,7 +41,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
     demand_profile_fw = demand_profile_pre[:]
     demand_profile_fw_pre = demand_profile_pre[:]
     best_step_size = 0
-    min_step_size = 0.005
+    min_step_size = 0.01
     gradient = -999
     counter = 0
     while gradient < 0 and best_step_size < 1:

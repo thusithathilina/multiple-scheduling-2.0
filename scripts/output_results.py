@@ -46,6 +46,7 @@ def write_batch_experiment_summary(exp_summary_dt, group_by_cols, dt_folder, tim
             if "reduction" in key_selected:
                 p_line.yaxis.formatter = NumeralTickFormatter(format='0 %')
             p_line.legend.location = "top_left"
+            p_line.y_range.start = 0
             plots.append(p_line)
 
         pandas_bokeh.output_file("{}{}.html".format(dt_folder, result_type_name))
@@ -143,6 +144,7 @@ def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folde
                 marker="circle",
             )
             p_line_cost.plot_height = p_height
+            p_line_cost.y_range.start = 0
 
             p_line_demand = df_demands_dt[alg].T.plot_bokeh(
                 kind="line",
@@ -157,6 +159,7 @@ def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folde
                 toolbar_location="above",
             )
             p_line_demand.plot_height = p_height
+            p_line_demand.y_range.start = 0
             p_line_demand = place_legend(p_line_demand)
             p_line_demand.renderers[0].muted = False
             p_line_demand.renderers[-1].muted = False
@@ -174,6 +177,7 @@ def draw_graphs(df_summary, df_demands_dt, df_prices_dt, df_others_dt, exp_folde
                 toolbar_location="above",
             )
             p_line_price.plot_height = p_height
+            p_line_price.y_range.start = 0
             p_line_price = place_legend(p_line_price)
             p_line_price.renderers[0].muted = False
             p_line_price.renderers[-1].muted = False
