@@ -1,6 +1,7 @@
 from scripts.cfunctions import *
 from scripts.input_parameter import *
 from time import time
+from math import ceil
 
 
 def pricing_cost(demand_profile, pricing_table, cost_function):
@@ -40,7 +41,7 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
     demand_profile_fw = demand_profile_pre[:]
     demand_profile_fw_pre = demand_profile_pre[:]
     best_step_size = 0
-    min_step_size = 0.005
+    min_step_size = 0.001
     gradient = -999
     counter = 0
     while gradient < 0 and best_step_size < 1:
@@ -57,8 +58,8 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
             else:
                 dd = dn - dp
                 dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp) - 0.01
-                step = (dl - dp) / dd
-                # step = max(step, min_step_size)
+                step = ceil((dl - dp) / dd * 1000) / 1000
+                step = max(step, min_step_size)
                 # print(step)
             step_profile.append(step)
 
