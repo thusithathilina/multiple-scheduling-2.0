@@ -4,8 +4,8 @@ no_periods = 48
 no_intervals_periods = int(no_intervals / no_periods)
 
 # household related parameters
-new_households = True
-# new_households = False
+# new_households = True
+new_households = False
 no_households = 100
 no_tasks_min = 5
 max_demand_multiplier = no_tasks_min

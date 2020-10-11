@@ -54,12 +54,13 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
                 try:
                     dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp)
                     step = round((dl - dp) / dd, 3)
-                    step = min(1, step) if step > 0.01 else 1
+                    step = step if step > 0.001 else 0.001
                 except ValueError:
                     pass
             step_profile.append(step)
 
         temp_step_size = min(step_profile)
+        # print(counter, temp_step_size)
         demand_profile_fw_temp = [d_p + (d_n - d_p) * temp_step_size for d_p, d_n in
                                   zip(demand_profile_fw_pre, demand_profile_new)]
         price_fw, cost_fw = pricing_cost(demand_profile_fw_temp, pricing_table, cost_type)

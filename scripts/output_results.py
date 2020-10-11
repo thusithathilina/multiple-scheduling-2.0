@@ -197,7 +197,7 @@ def write_results(key_parameters, area_res, exp_folder, note):
         f.write(note)
     f.close()
 
-    with open(exp_folder + "area_output" + '.pkl', 'wb+') as f:
+    with open(exp_folder + "area_optimised" + '.pkl', 'wb+') as f:
         pickle.dump(area_res, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
@@ -206,8 +206,8 @@ def write_results(key_parameters, area_res, exp_folder, note):
     f.close()
 
     # copy the generated data
-    copy('data/area.pkl', exp_folder + "area_input.pkl")
-    copy('data/households.pkl', exp_folder + "households_input.pkl")
+    copy('data/area.pkl', exp_folder + "area.pkl")
+    copy('data/households.pkl', exp_folder + "households.pkl")
 
     def save_to_csv(data_dict, file_name):
         df = pd.DataFrame.from_dict(data_dict, orient='index')
