@@ -1,5 +1,4 @@
-from bisect import bisect_left
-from scripts.cfunctions import find_ge, find_le
+from scripts.cfunctions import *
 from scripts.input_parameter import *
 from time import time
 
@@ -49,15 +48,17 @@ def pricing_step_size(pricing_table, demand_profile_pre, demand_profile_new, pen
         for dp, dn, d_levels_period in \
                 zip(demand_profile_fw_pre, demand_profile_new, pricing_table[k0_demand_table].values()):
             d_levels = list(d_levels_period.values())
-            step = 1
-            dd = dn - dp
-            if dd != 0:
-                try:
-                    dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp)
-                    step = round((dl - dp) / dd, 2)
-                    step = max(step, min_step_size)
-                except ValueError:
-                    pass
+            min_d_l = min(d_levels)
+            max_d_l = max(d_levels)
+            second_max_d_l = d_levels[-2]
+            if dn < dp < min_d_l or dp < dn < min_d_l or dn > dp > second_max_d_l \
+                    or dp > dn > max_d_l or dn == dp:
+                step = 1
+            else:
+                dd = dn - dp
+                dl = find_ge(d_levels, dp) + 0.01 if dd > 0 else find_le(d_levels, dp) - 0.01
+                step = round((dl - dp) / dd, 2)
+                step = max(step, min_step_size)
             step_profile.append(step)
 
         temp_step_size = min(step_profile)
