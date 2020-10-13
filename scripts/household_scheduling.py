@@ -35,7 +35,7 @@ def data_preprocessing(num_intervals, demands, prices_day, earliest_starts, late
     return run_costs
 
 
-def household_heuristic_solving(num_intervals, num_tasks, durations, demands, predecessors, successors,
+def household_heuristic_solving(num_intervals, durations, demands, predecessors, successors,
                                 succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max):
     start_time = timeit.default_timer()
 
@@ -44,6 +44,7 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
     obj = 0
     max_duration = max(durations)
     big_cost = (num_intervals * cf_max * max_demand + max_demand * max_duration)
+    num_tasks = len(demands)
 
     def retrieve_successors_or_precedents(list0, prec_or_succ_list1, succ_prec_list2):
         list_r = []
@@ -150,7 +151,7 @@ def household_heuristic_solving(num_intervals, num_tasks, durations, demands, pr
 
 
 def household_optimal_solving \
-                (num_intervals, num_tasks, prices_day, preferred_starts, earliest_starts, latest_ends, durations,
+                (num_intervals, prices_day, preferred_starts, earliest_starts, latest_ends, durations,
                  demands, care_factors, no_precedences, predecessors, successors, succ_delays, max_demand, model_file,
                  solver_choice, model_type, solver_type, run_costs, search, cf_weight):
     # problem model
@@ -162,8 +163,9 @@ def household_optimal_solving \
     model.add_string("minimize obj;")
 
     ins = Instance(gecode, model)
+    num_tasks = len(demands)
     ins["num_intervals"] = num_intervals
-    ins["num_tasks"] = len(demands)
+    ins["num_tasks"] = num_tasks
     ins["durations"] = durations
     ins["demands"] = demands
     ins["num_precedences"] = no_precedences
@@ -213,7 +215,7 @@ def save_results(results, k1_algorithm_scheduling, return_dict):
 
 
 def household_scheduling_subproblem \
-                (num_intervals, num_tasks, num_periods, num_intervals_periods,
+                (num_intervals, num_periods, num_intervals_periods,
                  household, cf_weight, cf_max, area_prices, iteration,
                  model_file, m_type, s_type, solver_choice, var_sel, val_cho, algorithm_label):
 
@@ -248,14 +250,14 @@ def household_scheduling_subproblem \
 
         if "heuristic" in k1_algorithm_scheduling:
             actual_starts, demands_new, obj, runtime \
-                = household_heuristic_solving(num_intervals, num_tasks, durations, demands, precedents, successors,
+                = household_heuristic_solving(num_intervals, durations, demands, precedents, successors,
                                               succ_delays, max_demand, run_costs, preferred_starts, latest_ends, cf_max)
 
         else:  # "optimal" in k1_algorithm
             succ_delays2 = [x[0] for x in list(household["succ_delays"].values())]
             search = "int_search(actual_starts, {}, {}, complete)".format(var_sel, val_cho)
             actual_starts, demands_new, obj, runtime \
-                = household_optimal_solving(num_intervals, num_tasks, prices, preferred_starts, earliest_starts,
+                = household_optimal_solving(num_intervals, prices, preferred_starts, earliest_starts,
                                             latest_ends, durations, demands, care_factors, no_precedences, precedents,
                                             successors, succ_delays2, max_demand, model_file, solver_choice, m_type,
                                             s_type, run_costs, search, cf_weight)

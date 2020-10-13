@@ -8,8 +8,9 @@ from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select,
 from bokeh.plotting import figure
 from os import walk, path
 from pathlib import Path
-from scripts.iteration import *
+from scripts.input_parameter import *
 from datetime import date
+from math import pi
 
 exp_date = "2020-10-01"
 exp_time = "01-22-14-924742"
@@ -27,7 +28,6 @@ def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
             df.columns = [str(x) for x in range(len(area_res[k0][k1][0]))]
             target_dict[k0][k1] = df
             # target_dict[k0][k1].stack().reset_index()
-    return target_dict
 
 
 def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
@@ -37,41 +37,6 @@ def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
             combined_dict[k0] = area_res[k0][k1]
         df = pd.DataFrame(combined_dict, columns=k0_ks).reset_index(drop=True)
         target_dict[k1] = df
-    return target_dict
-
-
-def load_data(f_date, f_time):
-    date_time_folder = results_folder + "{}/{}/".format(f_date, f_time)
-    with open(date_time_folder + "area_output.pkl", 'rb') as f2:
-        area_res = pickle.load(f2)
-        f2.close()
-
-    k0_keys = [k0_demand]
-    k1_scheduling_ks = []
-    k1_pricing_fw_ks = []
-    all_labels = area_res[k0_demand].keys()
-    for label in all_labels:
-        if "fw" in label:
-            k1_pricing_fw_ks.append(label)
-        else:
-            k1_scheduling_ks.append(label)
-
-    prices_dt = dict()
-    prices_dt = dict_to_pd_dt(area_res, prices_dt, k0_keys, k1_scheduling_ks)
-
-    k0_keys = [k0_demand, k0_prices]
-    demands_prices_fw_dt = dict()
-    demands_prices_fw_dt = dict_to_pd_dt(area_res, demands_prices_fw_dt, k0_keys, k1_pricing_fw_ks)
-
-    k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_step]
-    if k0_time in area_res:
-        k0_keys.append(k0_time)
-    if k0_demand_total in area_res:
-        k0_keys.append(k0_demand_total)
-    others_combined_dt = dict()
-    others_combined_dt = combine_dict_to_pd_dt(area_res, others_combined_dt, k0_keys, k1_pricing_fw_ks)
-
-    return prices_dt, demands_prices_fw_dt, others_combined_dt, k1_scheduling_ks, k1_pricing_fw_ks
 
 
 def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_data, hover):
@@ -83,18 +48,13 @@ def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_da
     return p
 
 
-def draw_demand_price_heatmap(data_dict, dtype, x_loc, colors, k1_alg):
-    data = data_dict[dtype][k1_alg]
+def draw_demand_price_heatmap(source_heatmap, dtype, x_loc, colors):
+    tooltips = [('Iteration', '@Iteration'), ('Period', '@Period'), (dtype.capitalize(), '@' + dtype)]
 
-    x_periods = list(data.columns)
-    y_iterations = [str(x) for x in (list(data.index))]
-    data = data.iloc[::-1].stack().reset_index()
-    data.columns = ['Iteration', 'Period', dtype]
-    source_heatmap = ColumnDataSource(data)
-    tooltips = [('Iteration', '@Iteration'), ('Period', '@Period'), ('Value', '@' + dtype)]
-
-    mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
-    p = figure(title='{} Heatmap'.format(dtype), x_range=x_periods, y_range=y_iterations,
+    mapper = LinearColorMapper(palette=colors, low=0, high=999999)
+    p = figure(title='{} Heatmap'.format(dtype.capitalize()),
+               y_range=[str(x) for x in range(10)],
+               x_range=[str(x) for x in range(48)],
                x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
     p.grid.grid_line_color = None
@@ -114,21 +74,58 @@ def draw_demand_price_heatmap(data_dict, dtype, x_loc, colors, k1_alg):
                          label_standoff=6, border_line_color=None, location=(0, 0))
     p.add_layout(color_bar, 'right')
 
-    return p, source_heatmap, chart, color_bar, mapper
+    return p, chart, color_bar, mapper
 
 
 def make_data_tab():
     radio_button_group = RadioButtonGroup(labels=["Statistics", "Demand Profile", "Price Profile"], active=0)
-    data_table = DataTable(index_position=None)
+    source_datatable = ColumnDataSource()
+    data_table = DataTable(source=source_datatable, index_position=None)
 
-    return radio_button_group, data_table
-
-
-def make_graph_tab():
-    True
+    return radio_button_group, data_table, source_datatable
 
 
-def make_header(date_folder, time_folder, res_folder, k1_keys):
+def make_graph_tab(s_combined, s_heatmap_demand, s_heatmap_price):
+
+    # 4.1 line charts
+    hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
+    plot_line_cost = draw_line_chart(source_data=s_combined, title='Cost per Iteration',
+                                     x_label='Iteration', y_label='Cost (cent)', colour='orange',
+                                     x_data='index', top_data=k0_cost, hover=hover)
+    plot_line_demand_max = draw_line_chart(source_data=s_combined, title='Max demand per Iteration',
+                                           x_label='Iteration', y_label='Demand (KW)', colour='green',
+                                           x_data='index', top_data=k0_demand_max, hover=hover)
+
+    # 4.2 heatmaps
+    x_location = "above"
+    heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41",
+                       "#550b1d"]
+    plot_heatmap_demand, chart_heatmap_demand, color_bar_demand, mapper_demand \
+        = draw_demand_price_heatmap(s_heatmap_demand, k0_demand, x_location, heatmap_colours)
+
+    plot_heatmap_price, chart_heatmap_price, color_bar_prices, mapper_price \
+        = draw_demand_price_heatmap(s_heatmap_price, k0_prices, x_location, heatmap_colours)
+
+    # k1_algorithm = select_algorithm.value
+    # data = data_dict[dtype][k1_alg]
+    # x_periods = list(data.columns)
+    # y_iterations = [str(x) for x in (list(data.index))]
+    # data = data.iloc[::-1].stack().reset_index()
+    # data.columns = ['Iteration', 'Period', dtype]
+    # mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
+    # p = figure(title='{} Heatmap'.format(dtype), x_range=x_periods, y_range=y_iterations,
+    #            x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
+
+    return {"line": {k0_cost: plot_line_cost, k0_demand_max: plot_line_demand_max},
+            "heatmap": {"plot": {k0_demand: plot_heatmap_demand, k0_prices: plot_heatmap_price},
+                        "chart": {k0_demand: chart_heatmap_demand, k0_prices: chart_heatmap_price},
+                        "colour": {k0_demand: color_bar_demand, k0_prices: color_bar_prices},
+                        "mapper": {k0_demand: mapper_demand, k0_prices: mapper_price}
+                        }
+            }
+
+
+def make_header(date_folder, time_folder, res_folder):
     # 1.1 - date picker: choose the date of the results
     date_default = str(date.today()) if date_folder is None else date_folder
     date_available = [dirs for root, dirs, _ in walk(res_folder) if dirs != []][0]
@@ -139,8 +136,7 @@ def make_header(date_folder, time_folder, res_folder, k1_keys):
     select_time = Select(title="Select time:", value=time_folder)
 
     # 1.3 - select: choose the algorithm
-    chosen_algorithm = [k for k in k1_keys if "optimal" in k][0]
-    select_algorithm = Select(title="Select algorithm:", value=chosen_algorithm, options=k1_keys)
+    select_algorithm = Select(title="Select algorithm:")
 
     # 1.1.4 - div: show the experiment summary
     div = Div()
@@ -150,103 +146,64 @@ def make_header(date_folder, time_folder, res_folder, k1_keys):
 
 def view_results(date_folder, time_folder, res_folder):
 
-    # 0. load data
-    if date_folder is None:
-        date_folder = str(date.today())
-    if time_folder is None:
-        time_folder = [dirs for root, dirs, _ in walk(results_folder + date_folder) if dirs != []][0][0]
-    prices_dict, demands_prices_fw_dict, others_combined_dict, k1_scheduling_keys, k1_pricing_fw_keys \
-        = load_data(date_folder, time_folder)
-
-    # 1. header
+    # ------------------------------ 1. draw widgets ------------------------------ #
+    # 1.1 header
     header_date, header_time, header_algorithm, header_note \
-        = make_header(date_folder, time_folder, res_folder, k1_pricing_fw_keys)
+        = make_header(date_folder, time_folder, res_folder)
+    header_row = row(header_date, header_time, header_algorithm, header_note, sizing_mode='scale_width')
 
-    # 2. summary tab
+    # 1.2 summary tab
 
-    # 3. data Tab
-    data_radio_button_group, data_table = make_data_tab()
-    source_datatable = ColumnDataSource()
-    data_table.source = source_datatable
-
-    # 3.3. design layout
+    # 1.3 data Tab
+    data_radio_button_group, data_table, source_datatable = make_data_tab()
     layout_data = layout([
         [data_radio_button_group],
         [data_table]
     ], sizing_mode='scale_width')
     tab_data = Panel(child=layout_data, title='Data')
 
-    # ------------------------------ 4. Graph Tab ------------------------------ #
-    # 4.1. data source
+    # 1.4 graph Tab
     source_combined = ColumnDataSource()
     source_heatmap_demand = ColumnDataSource()
     source_heatmap_price = ColumnDataSource()
+    graph_dict = make_graph_tab(source_combined, source_heatmap_demand, source_heatmap_price)
+    plot_line_cost = graph_dict["line"][k0_cost]
+    plot_line_demand_max = graph_dict["line"][k0_demand_max]
 
-    # 4.2. line charts
-    plot_line_cost = figure()
-    plot_line_demand_max = figure()
+    plot_heatmap_demand = graph_dict["heatmap"]["plot"][k0_demand]
+    chart_heatmap_demand = graph_dict["heatmap"]["chart"][k0_demand]
+    color_bar_demand = graph_dict["heatmap"]["colour"][k0_demand]
+    mapper_demand = graph_dict["heatmap"]["mapper"][k0_demand]
 
-    # 4.3 heatmaps
-    plot_heatmap_demand = figure()
-    plot_heatmap_price = figure()
+    plot_heatmap_price = graph_dict["heatmap"]["plot"][k0_prices]
+    chart_heatmap_price = graph_dict["heatmap"]["chart"][k0_prices]
+    color_bar_prices = graph_dict["heatmap"]["colour"][k0_prices]
+    mapper_price = graph_dict["heatmap"]["mapper"][k0_prices]
 
-
-    # source_combined = ColumnDataSource()
-    # hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
-    # p_cost = draw_line_chart(source_data=source_combined, title='Cost per Iteration',
-    #                          x_label='Iteration', y_label='Cost (cent)', colour='orange',
-    #                          x_data='index', top_data=k0_cost, hover=hover)
-    # p_demand_max = draw_line_chart(source_data=source_combined, title='Max demand per Iteration',
-    #                                x_label='Iteration', y_label='Demand (KW)', colour='green',
-    #                                x_data='index', top_data=k0_demand_max, hover=hover)
-    # x_location = "above"
-    # heatmap_colours = ["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41",
-    #                    "#550b1d"]
-    # k1_algorithm = select_algorithm.value
-    # plot_heatmap_demand, source_heatmap_demand, chart_heatmap_demand, color_bar_demand, mapper_demand \
-    #     = draw_demand_price_heatmap(demands_prices_fw_dict, k0_demand, x_location, heatmap_colours, k1_algorithm)
-    #
-    # plot_heatmap_price, source_heatmap_price, chart_heatmap_price, color_bar_prices, mapper_price \
-    #     = draw_demand_price_heatmap(demands_prices_fw_dict, k0_prices, x_location, heatmap_colours, k1_algorithm)
-
-    # 4.5 graph tab layout
+    # todo - stretch is not working yet. want to make it responsive
     row1 = row(plot_line_cost, plot_heatmap_demand)
     row2 = row(plot_line_demand_max, plot_heatmap_price)
-    # todo - stretch is not working yet. want to make it responsive
     layout_graph = layout(column([row1, row2]), sizing_mode='stretch_both')
     tab_graph = Panel(child=layout_graph, title='Graph')
 
-    # ------------------------------ 4. event functions for widgets ------------------------------ #
-    def update_select_options(attr, old, new):
-        select_opt = [dirs for root, dirs, _ in walk(results_folder + "{}".format(new)) if dirs != []][0]
-        select_time.options = select_opt
-        select_time.value = select_opt[-1]
+    # 1.5 overall layout all
+    tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_both')
+    layout_overall = layout([
+        header_row,
+        tabs
+    ], sizing_mode='scale_width')
 
-    def update_data_table(active_radio_button):
+    # ------------------------------ 2. event functions for widgets ------------------------------ #
+    prices_dict = dict()
+    demands_prices_fw_dict = dict()
+    others_combined_dict = dict()
 
-        if active_radio_button == 1:  # demand
-            source_datatable.data = demands_prices_fw_dict[k0_demand][select_algorithm.value]
-        if active_radio_button == 2:  # prices
-            source_datatable.data = demands_prices_fw_dict[k0_prices][select_algorithm.value]
-        if active_radio_button == 0:  # others
-            source_datatable.data = others_combined_dict[select_algorithm.value]
-
-        columns_keys = source_datatable.data.keys()
-        table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
-                                     formatter=NumberFormatter(format="0,0.00", text_align="right"))
-                         for i in columns_keys]
-        data_table.columns = table_columns
-        data_table.update()
-
-    def update_line_chart():
-        source_combined.data = others_combined_dict[select_algorithm.value]
-        plot_cost.update()
-        plot_demand_max.update()
-
-    def update_heatmap(k0_label, source, plot, mapper, chart, colour_bar):
-        data = demands_prices_fw_dict[k0_label][select_algorithm.value]
+    def update_heatmap(chosen_algorithm, k0_label, source, plot, mapper, chart, colour_bar):
+        data = demands_prices_fw_dict[k0_label][chosen_algorithm]
+        x_periods = [str(x) for x in (list(data.columns))]
         y_iterations = [str(x) for x in (list(data.index))]
         plot.y_range.factors = y_iterations
+        plot.x_range.factors = x_periods
 
         data = data.iloc[::-1].stack().reset_index()
         data.columns = ['Iteration', 'Period', k0_label]
@@ -258,55 +215,125 @@ def view_results(date_folder, time_folder, res_folder):
         chart.update()
         colour_bar.update()
 
-    def update_content(attr, old, new):
+    def update_line_chart(chosen_algorithm):
+        source_combined.data = others_combined_dict[chosen_algorithm]
+        plot_line_cost.update()
+        plot_line_demand_max.update()
 
-        update_data_table(new)
-        update_line_chart()
+    def update_data_table(active_radio_button, chosen_algorithm):
 
-        update_heatmap(k0_demand, source_heatmap_demand, plot_heatmap_demand, mapper_demand,
-                       chart_heatmap_demand, color_bar_demand)
-        update_heatmap(k0_prices, source_heatmap_price, plot_heatmap_price, mapper_price,
-                       chart_heatmap_price, color_bar_prices)
+        if active_radio_button == 1:  # demand
+            source_datatable.data = demands_prices_fw_dict[k0_demand][chosen_algorithm]
+        if active_radio_button == 2:  # prices
+            source_datatable.data = demands_prices_fw_dict[k0_prices][chosen_algorithm]
+        if active_radio_button == 0:  # others
+            source_datatable.data = others_combined_dict[chosen_algorithm]
 
-    def update_div_content(attr, d_f, t_f):
-        f = open(results_folder + "{}/{}/".format(d_f, t_f) + 'summary.txt', 'r+')
+        columns_keys = source_datatable.data.keys()
+        table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
+                                     formatter=NumberFormatter(format="0,0.00", text_align="right"))
+                         for i in columns_keys]
+        data_table.columns = table_columns
+        data_table.update()
+
+    def update_header_algorithm(keys):
+        chosen_algorithm = [k for k in keys if "optimal" in k][0]
+        header_algorithm.value = chosen_algorithm
+        header_algorithm.options = keys
+        header_algorithm.update()
+
+    def update_data_source(new_time):
+        date_t = header_date.value
+        time_t = new_time
+        date_time_folder = results_folder + "{}/{}/".format(date_t, time_t)
+
+        f = open(date_time_folder + 'summary.txt', 'r+')
         str_summary = f.read()
         f.close()
-        div.text = str_summary
+        header_note.text = str_summary
 
-    def update_source(attr, old, new):
-        d_folder = date_picker.value
-        t_folder = new
-        prices_dict, demands_prices_fw_dict, others_combined_dict, k1_scheduling_keys, k1_pricing_fw_keys \
-            = load_data(date_folder, time_folder, prices_dict, demands_prices_fw_dict, others_combined_dict)
-        active_radio_button = radio_button_group.active
-        update_content(None, None, active_radio_button)
-        update_div_content(None, d_folder, t_folder)
+        with open(date_time_folder + "area_output.pkl", 'rb') as f2:
+            area_res = pickle.load(f2)
+            f2.close()
 
-    def switch_algorithm(attr, old, new):
-        active_radio_button = radio_button_group.active
-        update_content(None, None, active_radio_button)
+        k0_keys = [k0_demand]
+        k1_scheduling_ks = []
+        k1_pricing_fw_ks = []
+        all_labels = area_res[k0_demand].keys()
+        for label in all_labels:
+            if "fw" in label:
+                k1_pricing_fw_ks.append(label)
+            else:
+                k1_scheduling_ks.append(label)
 
-    prices_dict, demands_prices_fw_dict, others_combined_dict, k1_scheduling_keys, k1_pricing_fw_keys \
-        = load_data(date_folder, time_folder, prices_dict, demands_prices_fw_dict, others_combined_dict)
-    update_select_options(None, None, date_picker.value)
-    update_content(None, None, 0)
-    update_div_content(None, date_picker.value, select_time.value)
+        dict_to_pd_dt(area_res, prices_dict, k0_keys, k1_scheduling_ks)
 
-    # ------------------------------ 5. assign event functions to widgets ------------------------------ #
-    date_picker.on_change("value", update_select_options)
-    select_time.on_change("value", update_source)
-    select_algorithm.on_change("value", switch_algorithm)
-    radio_button_group.on_change("active", update_content)
+        k0_keys = [k0_demand, k0_prices]
+        dict_to_pd_dt(area_res, demands_prices_fw_dict, k0_keys, k1_pricing_fw_ks)
 
-    # ------------------------------ 4. Show all ------------------------------ #
-    tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_both')
-    layout_overall = layout([
-        [date_picker, select_time, select_algorithm, div],
-        tabs
-    ], sizing_mode='scale_width')
+        k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_step]
+        if k0_time in area_res:
+            k0_keys.append(k0_time)
+        if k0_demand_total in area_res:
+            k0_keys.append(k0_demand_total)
+        combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_pricing_fw_ks)
+
+        return k1_scheduling_ks, k1_pricing_fw_ks
+
+    def callback_update_data_table(attr, old, active_radio_button):
+        update_data_table(active_radio_button, header_algorithm.value)
+
+    def callback_update_data_source(attr, old, new_time):
+        # read new data source
+        k1_scheduling_keys, k1_pricing_fw_keys = update_data_source(new_time)
+
+        # update the algorithm selection
+        update_header_algorithm(k1_pricing_fw_keys)
+        chosen_algorithm = header_algorithm.value
+        callback_switch_algorithm(None, None, chosen_algorithm)
+
+    def callback_update_header_time_options(attr, old, new_date):
+        select_opt = [dirs for root, dirs, _ in walk(results_folder + "{}".format(new_date)) if dirs != []][0]
+        header_time.options = select_opt
+        # todo - choose the latest dataset
+        header_time.value = select_opt[-1]
+
+    def callback_switch_algorithm(attr, old, chosen_algorithm):
+        # update the datatable content
+        active_button = data_radio_button_group.active
+        update_data_table(active_button, chosen_algorithm)
+
+        # update the line graphs
+        update_line_chart(chosen_algorithm)
+
+        # update the heat maps
+        update_heatmap(chosen_algorithm=chosen_algorithm, k0_label=k0_demand, source=source_heatmap_demand,
+                       plot=plot_heatmap_demand, mapper=mapper_demand, chart=chart_heatmap_demand,
+                       colour_bar=color_bar_demand)
+        update_heatmap(chosen_algorithm=chosen_algorithm, k0_label=k0_prices, source=source_heatmap_price,
+                       plot=plot_heatmap_price, mapper=mapper_price, chart=chart_heatmap_price,
+                       colour_bar=color_bar_prices)
+        # update_heatmap(k0_demand, source_heatmap_demand, plot_heatmap_demand, mapper_demand,
+        #                chart_heatmap_demand, color_bar_demand)
+        # update_heatmap(k0_prices, source_heatmap_price, plot_heatmap_price, mapper_price,
+        #                chart_heatmap_price, color_bar_prices)
+
+    # ------------------------------ 3. assign event functions to widgets ------------------------------ #
+    header_date.on_change("value", callback_update_header_time_options)
+    header_time.on_change("value", callback_update_data_source)
+    header_algorithm.on_change("value", callback_switch_algorithm)
+    data_radio_button_group.on_change("active", callback_update_data_table)
 
     curdoc().add_root(layout_overall)
+
+    # ------------------------------ 4. initialise ------------------------------ #
+    start_date = exp_date if exp_date is not None else str(date.today())
+    start_time = exp_time if exp_time is not None else header_time.value
+
+    callback_update_header_time_options(None, None, start_date)
+    callback_update_data_source(None, None, start_time)
+    callback_switch_algorithm(None, None, header_algorithm.value)
+    callback_update_data_table(None, None, 0)
 
 
 view_results(exp_date, exp_time, results_folder)

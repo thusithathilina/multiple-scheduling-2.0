@@ -7,7 +7,7 @@ from scripts.input_parameter import *
 from json import dumps
 
 
-def write_results(area_res, out_folder, sum_dict, note, alg_labels):
+def write_results(households, area_res, out_folder, sum_dict, note, alg_labels):
     out_date_folder = out_folder + "{}/".format(str(date.today()))
     out_date_time_folder = out_date_folder + "{}/"\
         .format(str(datetime.now().time()).replace(":", "-").replace(".", "-"))
@@ -26,6 +26,9 @@ def write_results(area_res, out_folder, sum_dict, note, alg_labels):
     with open(out_date_time_folder + "area_output" + '.pkl', 'wb+') as f:
         pickle.dump(area_res, f, pickle.HIGHEST_PROTOCOL)
     f.close()
+
+    pd.DataFrame.from_dict(households, orient='index')\
+        .to_csv(out_date_time_folder + "{}.csv".format("households"))
 
     with open(out_date_time_folder + "summary" + '.pkl', 'wb+') as f:
         pickle.dump(sum_dict, f, pickle.HIGHEST_PROTOCOL)
