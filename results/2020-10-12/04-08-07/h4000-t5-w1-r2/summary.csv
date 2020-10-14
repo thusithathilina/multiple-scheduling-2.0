@@ -1,0 +1,5 @@
+,average_run_time_per_iteration,no_iterations,no_households,no_tasks,penalty_weight,cost_function_type,max_demand initial,max_demand final,max_demand reduction,PAR initial,PAR final,PAR reduction,objective initial,objective final,objective reduction,cost initial,cost final,cost reduction
+optimal,1520.427,27,4000,5,1,piece-wise,2005605,49926321.0,-23.893,1.25,31.15,-23.92,1296679732.3,15315392732.6,-10.811,1296679732.3,15310528891.6,-10.807
+optimal_fw,0.004,27,4000,5,1,piece-wise,2005605,1682453.5273057534,0.161,1.25,1.05,0.16,1296679732.3,1158016360.4685564,0.107,1296679732.3,1158012478.76,0.107
+heuristic,1.699,25,4000,5,1,piece-wise,2005605,42273421.0,-20.078,1.25,26.38,-20.104,1296679732.3,12914189672.8,-8.959,1296679732.3,12909832973.8,-8.956
+heuristic_fw,0.004,25,4000,5,1,piece-wise,2005605,1685588.3748600753,0.16,1.25,1.05,0.16,1296679732.3,1157970774.7081835,0.107,1296679732.3,1157966189.07,0.107

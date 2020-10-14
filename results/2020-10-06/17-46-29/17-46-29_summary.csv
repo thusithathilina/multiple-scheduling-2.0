@@ -1,0 +1,25 @@
+repeat,no_households,algorithm,no_tasks,penalty_weight,cost_function_type,Average run_time
+0,10,optimal,5,1,piece-wise,1.05
+0,10,optimal_fw,5,1,piece-wise,0.0
+0,10,heuristic,5,1,piece-wise,0.0
+0,10,heuristic_fw,5,1,piece-wise,0.001
+0,20,optimal,5,1,piece-wise,4.28
+0,20,optimal_fw,5,1,piece-wise,0.001
+0,20,heuristic,5,1,piece-wise,0.0
+0,20,heuristic_fw,5,1,piece-wise,0.002
+1,10,optimal,5,1,piece-wise,1.17
+1,10,optimal_fw,5,1,piece-wise,0.002
+1,10,heuristic,5,1,piece-wise,0.0
+1,10,heuristic_fw,5,1,piece-wise,0.002
+1,20,optimal,5,1,piece-wise,3.576
+1,20,optimal_fw,5,1,piece-wise,0.001
+1,20,heuristic,5,1,piece-wise,0.0
+1,20,heuristic_fw,5,1,piece-wise,0.002
+2,10,optimal,5,1,piece-wise,1.11
+2,10,optimal_fw,5,1,piece-wise,0.001
+2,10,heuristic,5,1,piece-wise,0.0
+2,10,heuristic_fw,5,1,piece-wise,0.001
+2,20,optimal,5,1,piece-wise,2.813
+2,20,optimal_fw,5,1,piece-wise,0.002
+2,20,heuristic,5,1,piece-wise,0.001
+2,20,heuristic_fw,5,1,piece-wise,0.002

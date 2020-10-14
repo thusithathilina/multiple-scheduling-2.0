@@ -1,0 +1,5 @@
+repeat,no_households,algorithm,no_tasks,penalty_weight,cost_function_type,Average run_time
+0,10,optimal,5,1,piece-wise,1.02
+0,10,optimal_fw,5,1,piece-wise,0.0
+0,10,heuristic,5,1,piece-wise,0.0
+0,10,heuristic_fw,5,1,piece-wise,0.0

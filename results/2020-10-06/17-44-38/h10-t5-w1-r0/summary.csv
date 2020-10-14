@@ -1,0 +1,5 @@
+,no_tasks,penalty_weight,cost_function_type,Average run_time
+optimal,5,1,piece-wise,1.013
+optimal_fw,5,1,piece-wise,0.002
+heuristic,5,1,piece-wise,0.0
+heuristic_fw,5,1,piece-wise,0.001
