@@ -3,20 +3,20 @@ from scripts.output_results import write_batch_experiment_summary
 from datetime import date, datetime
 
 
-repeat_num = 5
-household_nums = [2000, 4000, 6000, 8000, 10000]
+repeat_num = 1
+# household_nums = [2000, 4000, 6000, 8000, 10000]
 # household_nums = [20, 40, 60, 80, 100]
 # household_nums = household_nums.reverse()
-# household_nums = [10000]
+household_nums = [10]
 new_data = True
 # new_data = False
 type_cost_function = "piece-wise"
 # type_cost_function = "linear"
 
 algorithms_labels = dict()
-algorithms_labels[k1_optimal] = dict()
-algorithms_labels[k1_optimal][k2_scheduling] = k1_optimal
-algorithms_labels[k1_optimal][k2_pricing] = "{}_fw".format(k1_optimal)
+# algorithms_labels[k1_optimal] = dict()
+# algorithms_labels[k1_optimal][k2_scheduling] = k1_optimal
+# algorithms_labels[k1_optimal][k2_pricing] = "{}_fw".format(k1_optimal)
 algorithms_labels[k1_heuristic] = dict()
 algorithms_labels[k1_heuristic][k2_scheduling] = k1_heuristic
 algorithms_labels[k1_heuristic][k2_pricing] = "{}_fw".format(k1_heuristic)

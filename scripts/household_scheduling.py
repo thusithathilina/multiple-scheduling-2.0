@@ -219,7 +219,7 @@ def household_scheduling_subproblem \
     successors = list(household["precs"].keys())
     succ_delays = household["succ_delays"]  # need to change this format when sending it to the solver
     no_precedences = household["no_prec"]
-    max_demand = household["max", "limit"]
+    max_demand = household["demand"]["limit"]
 
     if len(prices) == num_periods:
         prices = [int(p) for p in prices[:num_periods] for _ in range(num_intervals_periods)]
@@ -251,7 +251,7 @@ def household_scheduling_subproblem \
     if key % 100 == 0:
         print("Household {} rescheduled by {}".format(key, k1_algorithm_scheduling))
 
-    # household[k0_starts] = actual_starts
+    # household[k0_starts] = actual_starts (moved to outer iteration)
 
     return {k0_household_key: key, k0_starts: actual_starts, k0_demand: demands_new, k0_obj: obj, k0_penalty: penalty,
             k0_time: round(runtime, 3)}

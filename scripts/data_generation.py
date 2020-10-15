@@ -8,6 +8,8 @@ import os
 from more_itertools import grouper
 from scripts.input_parameter import *
 from scripts.cfunctions import average
+from pathlib import Path
+from json import dumps
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):
@@ -166,13 +168,18 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
         no_precedences, precedors, succ_delays, maximum_demand, aggregated_loads
 
 
-def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
+def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder, exp_folder,
                     num_households, num_tasks_min, num_tasks_max, cf_weight, cf_max, max_d_multiplier,
                     f_probability, f_demand_list, algorithms_labels):
     probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
     households = dict()
     area_demand_profile = [0] * num_intervals
+
+    household_folder = exp_folder + "households/"
+    path_h_folder = Path(household_folder)
+    if not path_h_folder.exists():
+        path_h_folder.mkdir(mode=0o777, parents=True, exist_ok=False)
 
     for h in range(num_households):
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
@@ -194,9 +201,10 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         households[household_key]["succ_delays"] = succ_delays
         households[household_key]["no_prec"] = num_precedences
 
-        households[household_key]["profile", "preferred"] = household_profile
-        households[household_key]["max", "preferred"] = max(household_profile)
-        households[household_key]["max", "limit"] = max_demand
+        households[household_key]["demand"] = dict()
+        households[household_key]["demand"]["preferred"] = household_profile
+        households[household_key]["demand"]["max"] = max(household_profile)
+        households[household_key]["demand"]["limit"] = max(household_profile)
 
         households[household_key][k0_starts] = dict()
         households[household_key][k0_cost] = dict()
@@ -211,6 +219,12 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
             # households[household_key][k0_starts][k1_optimal_scheduling][0] = preferred_starts
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
+
+        # write this household data to a file
+        with open(household_folder + "household{}.json".format(household_key), 'w+') as f:
+            f.write(dumps(households[household_key], indent=4))
+        f.close()
+
 
     area_demand_profile2 = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
     max_demand = max(area_demand_profile2)
