@@ -1,22 +1,24 @@
 from scripts.experiment import *
 from scripts.output_results import write_batch_experiment_summary
 from datetime import date, datetime
-
+from scripts.data_mode import DataMode
 
 repeat_num = 1
+enable_fdia = False
+injection_percentage = 0.1
 # household_nums = [2000, 4000, 6000, 8000, 10000]
 # household_nums = [20, 40, 60, 80, 100]
 # household_nums = household_nums.reverse()
 household_nums = [10]
-new_data = True
+data_mode = DataMode.CSV_CONVERT
 # new_data = False
 type_cost_function = "piece-wise"
 # type_cost_function = "linear"
 
 algorithms_labels = dict()
-# algorithms_labels[k1_optimal] = dict()
-# algorithms_labels[k1_optimal][k2_scheduling] = k1_optimal
-# algorithms_labels[k1_optimal][k2_pricing] = "{}_fw".format(k1_optimal)
+algorithms_labels[k1_optimal] = dict()
+algorithms_labels[k1_optimal][k2_scheduling] = k1_optimal
+algorithms_labels[k1_optimal][k2_pricing] = "{}_fw".format(k1_optimal)
 algorithms_labels[k1_heuristic] = dict()
 algorithms_labels[k1_heuristic][k2_scheduling] = k1_heuristic
 algorithms_labels[k1_heuristic][k2_pricing] = "{}_fw".format(k1_heuristic)
@@ -36,8 +38,9 @@ def run():
             date_time_experiment_folder = date_time_folder \
                                           + "h{0}-t{1}-w{2}-r{3}/".format(n, no_tasks_min, care_f_weight, r)
 
-            experiment_summary = experiment(n, no_tasks_min, no_tasks_min + 2, new_data, type_cost_function,
-                                            algorithms_labels, date_time_experiment_folder)
+            experiment_summary = experiment(n, no_tasks_min, no_tasks_min + 2, data_mode, type_cost_function,
+                                            algorithms_labels, date_time_experiment_folder, enable_fdia,
+                                            injection_percentage)
             for algorithm in algorithms_labels.values():
                 for v in algorithm.values():
                     experiment_summary_dict[r, n, v] = experiment_summary[v]

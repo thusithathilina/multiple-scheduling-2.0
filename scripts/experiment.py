@@ -1,9 +1,13 @@
+from scripts.csv_to_dict_converter import convert_from_csv
+from scripts.data_mode import DataMode
+from scripts.fdia_integrator import fdia_inject
 from scripts.iteration import *
 from scripts.input_parameter import *
 from scripts.output_results import write_results
 
 
-def experiment(num_households, num_tasks_min, num_tasks_max, new_data, cost_type, algorithms_labels, experiment_folder):
+def experiment(num_households, num_tasks_min, num_tasks_max, data_mode, cost_type, algorithms_labels, experiment_folder,
+               enable_fdia=False, injection_percentage=0):
 
     print("---------- Experiment Summary ----------")
     str_note = "{0} households, min {1} tasks per household, {2} cost function, {3} care factor weight" \
@@ -11,15 +15,21 @@ def experiment(num_households, num_tasks_min, num_tasks_max, new_data, cost_type
     print(str_note)
 
     print("---------- Data Generation ----------")
-    if new_data:
+    if data_mode == DataMode.CREATE:
         households, area = area_generation(no_intervals, no_periods, no_intervals_periods,
                                            file_household_area_folder, experiment_folder,
                                            num_households, num_tasks_min, num_tasks_max, care_f_weight, care_f_max,
                                            max_demand_multiplier, file_probability, file_demand_list, algorithms_labels)
         print("Household data created...")
-    else:
+    elif data_mode == DataMode.EXISTING:
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
+    else:
+        households, area = convert_from_csv('data/2017-06-01_avg.csv', algorithms_labels, no_intervals_periods)
+
+    # FDIA injection
+    if enable_fdia:
+        households, area = fdia_inject(households, area, list(algorithms_labels)[0], injection_percentage)
 
     k1_temp = list(algorithms_labels)[0]
     demand_level_scale = area[k1_temp][k0_demand_max][0] * pricing_table_weight
