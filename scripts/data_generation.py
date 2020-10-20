@@ -8,6 +8,8 @@ import os
 from more_itertools import grouper
 from scripts.input_parameter import *
 from scripts.cfunctions import average
+from pathlib import Path
+from json import dumps
 
 
 def read_data(f_cp_pre, f_cp_ini, f_pricing_table, demand_level_scale, zero_digit):
@@ -57,16 +59,18 @@ def task_generation(num_intervals, num_periods, num_intervals_periods, mode_valu
     e_start = 0
 
     # generation - latest finish time
-    l_finish = r.randint(p_start + duration, num_intervals - 1 + duration)
+    # l_finish = r.randint(p_start + duration, num_intervals - 1 + duration)
+    l_finish = num_intervals - 1 + duration
 
     # generation - care factor
-    care_f = int(r.choice([i for i in range(cf_max + 1)]))
+    # care_f = int(r.choice([i for i in range(1, cf_max + 1)]))
+    care_f = r.randint(1, cf_max + 1)
 
     return demand, duration, p_start, e_start, l_finish, care_f
 
 
-def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, p_d,
-                         max_demand_multiplier, cf_max, f_demand_list):
+def household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, num_tasks_max, p_d,
+                         max_demand_mul, cf_max, f_demand_list):
     p_d_short = [int(p) for p in p_d[0]]
     sum_t = sum(p_d_short)
     p_d_short = [p / sum_t for p in p_d_short]
@@ -87,7 +91,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
     aggregated_loads = [0] * num_intervals
 
     # tasks in the household
-    num_tasks = r.randint(num_tasks_min, num_tasks_min + 5)
+    num_tasks = r.randint(num_tasks_min, num_tasks_max)
     for counter_j in range(num_tasks):
         demand, duration, p_start, e_start, l_finish, care_f \
             = task_generation(num_intervals, num_periods, num_intervals_periods,
@@ -102,7 +106,7 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
         for d in range(duration):
             aggregated_loads[(p_start + d) % num_intervals] += demand
     # set the household demand limit
-    maximum_demand = max(demands) * max_demand_multiplier
+    maximum_demand = max(demands) * max_demand_mul
 
     # precedence among tasks
     precedors = dict()
@@ -128,11 +132,9 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
             precedors[task].append(previous)
             succ_delays[task].append(delay)
 
-    for t in range(num_tasks, num_tasks):
+    for t in range(int(num_tasks / 2), num_tasks):
         if r.choice([True, False]):
-        # if True:
             previous_tasks = list(range(t))
-            # previous_tasks.reverse()
             r.shuffle(previous_tasks)
             for prev in previous_tasks:
                 if preferred_starts[prev] + durations[prev] - 1 < preferred_starts[t] \
@@ -143,7 +145,6 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
                         succeding_delay = num_intervals - 1
                         add_precedes(t, prev, succeding_delay)
                         no_precedences += 1
-
                         break
                     else:
                         # find all precedors of this previous task
@@ -167,23 +168,29 @@ def household_generation(num_intervals, num_periods, num_intervals_periods, num_
         no_precedences, precedors, succ_delays, maximum_demand, aggregated_loads
 
 
-def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder,
-                    num_households, num_tasks_min, cf_weight, cf_max, max_d_multiplier,
+def area_generation(num_intervals, num_periods, num_intervals_periods, data_folder, exp_folder,
+                    num_households, num_tasks_min, num_tasks_max, cf_weight, cf_max, max_d_multiplier,
                     f_probability, f_demand_list, algorithms_labels):
     probability = genfromtxt(f_probability, delimiter=',', dtype="float")
 
     households = dict()
     area_demand_profile = [0] * num_intervals
 
+    household_folder = exp_folder + "households/"
+    path_h_folder = Path(household_folder)
+    if not path_h_folder.exists():
+        path_h_folder.mkdir(mode=0o777, parents=True, exist_ok=False)
+
     for h in range(num_households):
         preferred_starts, earliest_starts, latest_ends, durations, demands, care_factors, \
         num_precedences, precedors, succ_delays, max_demand, household_profile \
-            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min,
+            = household_generation(num_intervals, num_periods, num_intervals_periods, num_tasks_min, num_tasks_max,
                                    probability, max_d_multiplier, cf_max, f_demand_list)
 
         household_key = h
         households[household_key] = dict()
 
+        households[household_key][k0_household_key] = household_key
         households[household_key]["demands"] = demands
         households[household_key]["durs"] = durations
         households[household_key]["ests"] = earliest_starts
@@ -194,11 +201,15 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
         households[household_key]["succ_delays"] = succ_delays
         households[household_key]["no_prec"] = num_precedences
 
-        households[household_key]["profile", "preferred"] = household_profile
-        households[household_key]["max", "preferred"] = max(household_profile)
-        households[household_key]["max", "limit"] = max_demand
+        households[household_key]["demand"] = dict()
+        households[household_key]["demand"]["preferred"] = household_profile
+        households[household_key]["demand"]["max"] = max(household_profile)
+        households[household_key]["demand"]["limit"] = max(household_profile)
 
         households[household_key][k0_starts] = dict()
+        households[household_key][k0_cost] = dict()
+        households[household_key][k0_penalty] = dict()
+        households[household_key][k0_obj] = dict()
 
         for k in algorithms_labels.keys():
             households[household_key][k0_starts][k] = dict()
@@ -209,62 +220,45 @@ def area_generation(num_intervals, num_periods, num_intervals_periods, data_fold
 
         area_demand_profile = [x + y for x, y in zip(household_profile, area_demand_profile)]
 
-        area = generate_tracker(area_demand_profile, num_intervals_periods, algorithms_labels)
-
-        # write household data and area data into files
-        if not os.path.exists(data_folder):
-            os.makedirs(data_folder)
-
-        with open(data_folder + "households" + '.pkl', 'wb+') as f:
-            pickle.dump(households, f, pickle.HIGHEST_PROTOCOL)
+        # write this household data to a file
+        with open(household_folder + "household{}.json".format(household_key), 'w+') as f:
+            f.write(dumps(households[household_key], indent=4))
         f.close()
 
-        with open(data_folder + "area" + '.pkl', 'wb+') as f:
-            pickle.dump(area, f, pickle.HIGHEST_PROTOCOL)
-        f.close()
 
-        return households, area
-
-
-def generate_tracker(area_demand_profile, num_intervals_periods, algorithms_labels):
+    area_demand_profile2 = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+    max_demand = max(area_demand_profile2)
+    total_demand = sum(area_demand_profile2)
+    par = round(max_demand / average(area_demand_profile2), 2)
     area = dict()
+    for k1, v1 in algorithms_labels.items():
+        for v2 in v1.values():
+            area[v2] = dict()
+            area[v2][k0_demand] = dict()
+            area[v2][k0_demand_max] = dict()
+            area[v2][k0_demand_total] = dict()
+            area[v2][k0_par] = dict()
+            area[v2][k0_penalty] = dict()
 
-    def initialise_area_trackers(k0_key, k1_key):
-        if k0_key not in area:
-            area[k0_key] = dict()
-        area[k0_key][k1_key] = dict()
+            area[v2][k0_demand][0] = area_demand_profile2
+            area[v2][k0_demand_max][0] = max_demand
+            area[v2][k0_demand_total][0] = total_demand
+            area[v2][k0_par][0] = par
+            area[v2][k0_penalty][0] = 0
 
-    # initialise trackers
-    area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
-    # track four types of demand profiles, prices, objective values, costs, penalties, max demands and PARs
-    k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time, k0_step]
-    # k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
-    area[k0_demand_max] = dict()
-    area[k0_demand_total] = dict()
-    area[k0_par] = dict()
-    for k0 in k0_keys:
-        for alg in algorithms_labels.values():
-            for k1 in alg.values():
-                initialise_area_trackers(k0, k1)
-                # initial values for four kinds of demand profiles, max demands, PARs and the penalty
-                if k0 == k0_demand:
-                    area[k0][k1][0] = area_demand_profile_pricing
-                    max_demand = max(area_demand_profile_pricing)
-                    area[k0_demand_max][k1] = dict()
-                    area[k0_demand_total][k1] = dict()
-                    area[k0_par][k1] = dict()
-                    area[k0_demand_max][k1][0] = max_demand
-                    area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
-                    area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
+    # write household data and area data into files
+    if not os.path.exists(data_folder):
+        os.makedirs(data_folder)
 
-                if k0 == k0_penalty:
-                    area[k0_penalty][k1][0] = 0
+    with open(data_folder + "households" + '.pkl', 'wb+') as f:
+        pickle.dump(households, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
 
-                if k0 == k0_step:
-                    if "fw" in k1:
-                        initialise_area_trackers(k0, k1)
+    with open(data_folder + "area" + '.pkl', 'wb+') as f:
+        pickle.dump(area, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
 
-    return area
+    return households, area
 
 
 def area_read(data_folder):
@@ -275,80 +269,5 @@ def area_read(data_folder):
     with open(data_folder + "area" + '.pkl', 'rb') as f:
         area = pickle.load(f)
     f.close()
-
-    return households, area
-
-
-def convert(s):
-    try:
-        return int(s)
-    except ValueError:
-        return float(s)
-
-
-# This method can be used to convert the previous jobs.csv file to new structure
-def old_job_csv_to_new_structure(path, algorithms_labels, care_f_max = 10, delete_house_no=True, kw_to_watt = True):
-    with open(path, mode='r') as file:
-        csv_reader = reader(file)
-        headers = [h.strip(" \'") for h in next(csv_reader)]
-        if delete_house_no:
-            del headers[0]
-
-        demand_multiplier = 1
-        if kw_to_watt:
-            demand_multiplier = 1000
-
-        households = dict()
-        community = []
-        household = []
-        for row in csv_reader:
-            if len(row) == 0:
-                continue
-            if int(row[1]) == 0 and int(row[0]) > 0 and len(household) > 0:
-                community.append(household)
-                household = []
-            if delete_house_no:
-                del row[0]
-            task = {h: convert(i) for h, i in zip(headers[:len(row)], row)}
-            household.append(task)
-        community.append(household)
-
-        household_profile = [0] * no_intervals
-        area_demand_profile = [0] * no_intervals
-        h = 0
-        for household in community:
-            household_key = h
-            households[household_key] = dict()
-
-            households[household_key]["demands"] = [int(job['demand'] * demand_multiplier) for job in household]
-            households[household_key]["durs"] = [job['dur'] for job in household]
-            households[household_key]["ests"] = [job['estart'] for job in household]
-            households[household_key]["lfts"] = [job['lfinish'] for job in household]
-            households[household_key]["psts"] = [job['pstart'] for job in household]
-            households[household_key]["cfs"] = [job['caf'] * care_f_max for job in household]
-            # for the moment ignoring the job dependencies
-            households[household_key]["precs"] = dict()
-            households[household_key]["succ_delays"] = dict()
-            households[household_key]["no_prec"] = 0
-
-            for job in household:
-                for d in range(job['dur']):
-                    household_profile[(job['pstart'] + d) % no_intervals] += job['demand']
-
-            households[household_key]["profile", "preferred"] = household_profile
-            households[household_key]["max", "preferred"] = max(household_profile)
-            households[household_key]["max", "limit"] \
-                = max(households[household_key]["demands"]) * max_demand_multiplier
-
-            households[household_key][k0_starts] = dict()
-            for k in algorithms_labels.keys():
-                households[household_key][k0_starts][k] = dict()
-                households[household_key][k0_starts][k][0] = households[household_key]["psts"]
-
-            area_demand_profile = [a + b for a, b in zip(area_demand_profile, household_profile)]
-            household_profile = [0] * no_intervals
-            h += 1
-
-        area = generate_tracker(area_demand_profile, no_intervals_periods, algorithms_labels)
 
     return households, area

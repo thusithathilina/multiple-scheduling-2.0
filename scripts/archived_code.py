@@ -58,3 +58,157 @@
 # print(price_updated)
 # print("change of cost", change_of_cost)
 # change_of_gradient = abs(change_of_gradient)
+
+# in data_generation.py
+
+# def initialise_area_trackers(k0_key, k1_key):
+#     if k0_key not in area:
+#         area[k0_key] = dict()
+#     area[k0_key][k1_key] = dict()
+#
+#
+# # initialise trackers
+# area_demand_profile_pricing = [sum(x) for x in grouper(area_demand_profile, num_intervals_periods)]
+# # track four types of demand profiles, prices, objective values, costs, penalties, max demands and PARs
+# k0_keys = [k0_demand, k0_prices, k0_obj, k0_cost, k0_penalty, k0_time, k0_step]
+# # k1_keys = [k1_optimal_scheduling, k1_heuristic_scheduling, k1_optimal_fw, k1_heuristic_fw]
+# area[k0_demand_max] = dict()
+# area[k0_demand_total] = dict()
+# area[k0_par] = dict()
+# for k0 in k0_keys:
+#     for alg in algorithms_labels.values():
+#         for k1 in alg.values():
+#             initialise_area_trackers(k0, k1)
+#             # initial values for four kinds of demand profiles, max demands, PARs and the penalty
+#             if k0 == k0_demand:
+#                 area[k0][k1][0] = area_demand_profile_pricing
+#                 max_demand = max(area_demand_profile_pricing)
+#                 area[k0_demand_max][k1] = dict()
+#                 area[k0_demand_total][k1] = dict()
+#                 area[k0_par][k1] = dict()
+#                 area[k0_demand_max][k1][0] = max_demand
+#                 area[k0_demand_total][k1][0] = sum(area_demand_profile_pricing)
+#                 area[k0_par][k1][0] = average(area_demand_profile_pricing) / max_demand
+#
+#             if k0 == k0_penalty:
+#                 area[k0_penalty][k1][0] = 0
+#
+#             if k0 == k0_step:
+#                 if "fw" in k1:
+#                     initialise_area_trackers(k0, k1)
+
+# in household_scheduling.py
+# def save_results(results, k1_algorithm_scheduling, return_dict):
+#     results[k1_algorithm_scheduling] = dict()
+#     results[k1_algorithm_scheduling][k0_starts] = return_dict[k0_starts]
+#     results[k1_algorithm_scheduling][k0_demand] = return_dict[k0_demand]
+#     results[k1_algorithm_scheduling][k0_obj] = return_dict[k0_obj]
+#     results[k1_algorithm_scheduling][k0_penalty] = return_dict[k0_penalty]
+#     results[k1_algorithm_scheduling][k0_time] = return_dict[k0_time]
+#
+#     return results
+
+# in iteration.py
+# def extract_rescheduling_results(k1_algorithm_scheduling, results):
+#     starts_t = results[k1_algorithm_scheduling][k0_starts]
+#     demands_new_t = results[k1_algorithm_scheduling][k0_demand]
+#     obj_t = results[k1_algorithm_scheduling][k0_obj]
+#     penalty_t = results[k1_algorithm_scheduling][k0_penalty]
+#     time_t = results[k1_algorithm_scheduling][k0_time]
+#     return starts_t, demands_new_t, obj_t, penalty_t, time_t
+
+# def extract_pricing_results(k1_algorithm_scheduling, k1_algorithm_fw, results):
+#     prices_t = results[k1_algorithm_scheduling][k0_prices]
+#     cost_t = results[k1_algorithm_scheduling][k0_cost]
+#
+#     demands_fw_t = results[k1_algorithm_fw][k0_demand]
+#     prices_fw_t = results[k1_algorithm_fw][k0_prices]
+#     cost_fw_t = results[k1_algorithm_fw][k0_cost]
+#     penalty_fw_t = results[k1_algorithm_fw][k0_penalty]
+#     step_fw_t = results[k1_algorithm_fw][k0_step]
+#     time_fw_t = results[k1_algorithm_fw][k0_time]
+#
+#     return prices_t, cost_t, demands_fw_t, prices_fw_t, cost_fw_t, penalty_fw_t, step_fw_t, time_fw_t
+
+# in drsp_pricing.py
+# def save_results(results, k1_algorithm_scheduling, k1_algorithm_fw, prices, cost, demands_fw, prices_fw,
+#                  cost_fw, penalty_fw, step, run_t):
+#     results[k1_algorithm_scheduling] = dict()
+#     results[k1_algorithm_scheduling][k0_prices] = prices
+#     results[k1_algorithm_scheduling][k0_cost] = cost
+#
+#     results[k1_algorithm_fw] = dict()
+#     results[k1_algorithm_fw][k0_demand] = demands_fw
+#     results[k1_algorithm_fw][k0_prices] = prices_fw
+#     results[k1_algorithm_fw][k0_cost] = cost_fw
+#     results[k1_algorithm_fw][k0_penalty] = penalty_fw
+#     results[k1_algorithm_fw][k0_step] = step
+#     results[k1_algorithm_fw][k0_time] = run_t
+#
+#     return results
+
+# in output_results.py
+# def dict_to_pd_dt(k0_ks, k1_ks):
+#     for k0 in k0_ks:
+#         if k0 in area_res:
+#             for k1 in k1_ks:
+#                 if k1 in area_res[k0]:
+#                     df = pd.DataFrame.from_dict(area_res[k0][k1], orient='index')
+#                     df.to_csv(exp_folder + "{}-{}.csv".format(k0, k1))
+
+# in iteration.py
+# for key, household in households.items():
+#     # 2.1.1 - reschedule a household
+#     starts_household, demands_household, obj_household, penalty_household, time_household \
+#         = household_scheduling_subproblem(no_intervals, no_periods, no_intervals_periods,
+#                                           household, care_f_weight, care_f_max, prices_fw_pre,
+#                                           model_file, model_type,
+#                                           solver_type, solver_choice, var_selection, val_choice,
+#                                           key_scheduling)
+# with concurrent.futures.ProcessPoolExecutor() as executor:
+#     reschedule_results = {
+#         executor.submit(household_scheduling_subproblem, no_intervals, no_periods, no_intervals_periods,
+#                         household, care_f_weight, care_f_max, prices_fw_pre,
+#                         model_file, model_type,
+#                         solver_type, solver_choice, var_selection, val_choice,
+#                         key_scheduling): household for household in households.items()}
+#
+#     for item in concurrent.futures.as_completed(reschedule_results):
+#         result = reschedule_results[item][1]
+#         key = result[k0_household_key]
+#         starts_household = result[k0_starts]
+#         demands_household = result[k0_demand]
+#         obj_household = result[k0_obj]
+#         penalty_household = result[k0_penalty]
+#         time_household = result[k0_time]
+#
+#         # 2.1.2 - update the area trackers: demand profile, total objective value, total penalty and run time
+#         households[key][k0_starts][key_scheduling][itr] = starts_household
+#         demands_area_scheduling = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
+#         obj_area += obj_household
+#         penalty_area += penalty_household
+#         time_scheduling_iteration += time_household
+
+# reschedule_results = pool.starmap(household_scheduling_subproblem,
+#                                   [(no_intervals, no_periods, no_intervals_periods,
+#                                     household, care_f_weight, care_f_max, prices_fw_pre,
+#                                     model_file, model_type,
+#                                     solver_type, solver_choice, var_selection, val_choice,
+#                                     key_scheduling) for household in households.items()])
+# pool.close()
+# pool.join()
+#
+# for result in reschedule_results:
+#     key = result[k0_household_key]
+#     starts_household = result[k0_starts]
+#     demands_household = result[k0_demand]
+#     obj_household = result[k0_obj]
+#     penalty_household = result[k0_penalty]
+#     time_household = result[k0_time]
+#
+#     # 2.1.2 - update the area trackers: demand profile, total objective value, total penalty and run time
+#     households[key][k0_starts][key_scheduling][itr] = starts_household
+#     demands_area_scheduling = [x + y for x, y in zip(demands_household, demands_area_scheduling)]
+#     obj_area += obj_household
+#     penalty_area += penalty_household
+#     time_scheduling_iteration += time_household

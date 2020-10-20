@@ -41,5 +41,13 @@ def find_ge(a, x):
     raise ValueError
 
 
+def find_second_ge(a, x):
+    'Find second leftmost item greater than or equal to x'
+    i = bisect_left(a, x)
+    if i != len(a):
+        return a[i + 1]
+    raise ValueError
+
+
 def average(lst):
     return sum(lst) / len(lst)

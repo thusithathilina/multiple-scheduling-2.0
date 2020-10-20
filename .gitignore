@@ -33,6 +33,8 @@
 *.txss
 *.md
 *.txt
+*.pyc
+scripts/*.pyc
 
 # Mac IDE files
 *.swp
@@ -81,4 +83,3 @@ pics/price-demand
 harvard-2.0.5a
 pics/backup
 .idea/*
-results/*

@@ -3,7 +3,7 @@ import pandas as pd
 from bokeh.io import curdoc
 from bokeh.layouts import layout, column, row, grid
 from bokeh.models import ColumnDataSource, RadioButtonGroup, DatePicker, Select, Div, \
-    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Button, HoverTool, LinearColorMapper, ColorBar, BasicTicker, \
+    DataTable, TableColumn, NumberFormatter, Panel, Tabs, Range1d, HoverTool, LinearColorMapper, ColorBar, BasicTicker, \
     PrintfTickFormatter
 from bokeh.plotting import figure
 from os import walk, path
@@ -12,11 +12,20 @@ from scripts.input_parameter import *
 from datetime import date
 from math import pi
 
-exp_date = "2020-10-01"
-exp_time = "01-22-14-924742"
+exp_date = "2020-10-04"
+# exp_date = None
+exp_time = "04-29-41-234378"
 # parent_folder = "multiple/"
 parent_folder = ""
 results_folder = parent_folder + "results/"
+
+
+def to_pd(sum_dt, target_dict):
+    for k0, v0 in sum_dt.items():
+        for k1, v1 in v0.items():
+            if k1 not in target_dict:
+                target_dict[k1] = dict()
+            target_dict[k1][k0] = v1
 
 
 def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
@@ -30,18 +39,26 @@ def dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
             # target_dict[k0][k1].stack().reset_index()
 
 
-def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_ks):
-    for k1 in k1_ks:
+def combine_dict_to_pd_dt(area_res, target_dict, k0_ks, k1_s, k1_p):
+    for ks, kp in zip(k1_s, k1_p):
         combined_dict = dict()
+        pd_columns = []
         for k0 in k0_ks:
-            combined_dict[k0] = area_res[k0][k1]
-        df = pd.DataFrame(combined_dict, columns=k0_ks).reset_index(drop=True)
-        target_dict[k1] = df
+            if k0 == k0_time:
+                combined_dict[k1_time_scheduling] = area_res[k0][ks]
+                combined_dict[k1_time_pricing] = area_res[k0][kp]
+                pd_columns.extend([k1_time_scheduling, k1_time_pricing])
+            else:
+                combined_dict[k0] = area_res[k0][kp]
+                pd_columns.append(k0)
+        df = pd.DataFrame(combined_dict, columns=pd_columns).reset_index(drop=True)
+        target_dict[kp] = df
 
 
 def draw_line_chart(source_data, title, x_label, y_label, colour, x_data, top_data, hover):
     p = figure(title=title, background_fill_color="#fafafa", plot_height=350,
                x_axis_label=x_label, y_axis_label=y_label)
+    p.y_range.start = 0
     p.line(x_data, top_data, source=source_data)
     p.circle(x_data, top_data, size=5, source=source_data, selection_color="orange")
     p.add_tools(hover)
@@ -77,8 +94,10 @@ def draw_demand_price_heatmap(source_heatmap, dtype, x_loc, colors):
     return p, chart, color_bar, mapper
 
 
-def make_data_tab():
-    radio_button_group = RadioButtonGroup(labels=["Statistics", "Demand Profile", "Price Profile"], active=0)
+def make_overview_tab():
+    # labels = ["Summary", "Statistics", "Demand Profile", "Price Profile"]
+    labels = ["Summary", "Statistics"]
+    radio_button_group = RadioButtonGroup(labels=labels, active=0)
     source_datatable = ColumnDataSource()
     data_table = DataTable(source=source_datatable, index_position=None)
 
@@ -86,7 +105,6 @@ def make_data_tab():
 
 
 def make_graph_tab(s_combined, s_heatmap_demand, s_heatmap_price):
-
     # 4.1 line charts
     hover = HoverTool(tooltips=[('Iteration', '@index'), ('Cost', '@cost'), ('Max demand', '@max_demand')])
     plot_line_cost = draw_line_chart(source_data=s_combined, title='Cost per Iteration',
@@ -105,16 +123,6 @@ def make_graph_tab(s_combined, s_heatmap_demand, s_heatmap_price):
 
     plot_heatmap_price, chart_heatmap_price, color_bar_prices, mapper_price \
         = draw_demand_price_heatmap(s_heatmap_price, k0_prices, x_location, heatmap_colours)
-
-    # k1_algorithm = select_algorithm.value
-    # data = data_dict[dtype][k1_alg]
-    # x_periods = list(data.columns)
-    # y_iterations = [str(x) for x in (list(data.index))]
-    # data = data.iloc[::-1].stack().reset_index()
-    # data.columns = ['Iteration', 'Period', dtype]
-    # mapper = LinearColorMapper(palette=colors, low=data[dtype].min(), high=data[dtype].max())
-    # p = figure(title='{} Heatmap'.format(dtype), x_range=x_periods, y_range=y_iterations,
-    #            x_axis_location=x_loc, tooltips=tooltips, plot_width=900, plot_height=350)
 
     return {"line": {k0_cost: plot_line_cost, k0_demand_max: plot_line_demand_max},
             "heatmap": {"plot": {k0_demand: plot_heatmap_demand, k0_prices: plot_heatmap_price},
@@ -144,8 +152,23 @@ def make_header(date_folder, time_folder, res_folder):
     return date_picker, select_time, select_algorithm, div
 
 
-def view_results(date_folder, time_folder, res_folder):
+# def make_demand_price_tab(s_demands, s_prices):
+#     x_label = [str(i) for i in range(48)]
+#     # y_label = [str(i) for i in range(10)]
+#     p_demand = figure(title="Demand Profiles", background_fill_color="#fafafa", plot_height=600,
+#                       x_axis_label=x_label, y_axis_label=y_label)
+#     p_demand.line(x_data, top_data, source=source_data)
+#     p.circle(x_data, top_data, size=5, source=source_data, selection_color="orange")
+#     p.add_tools(hover)
+#
+#
+#     p_prices = figure(title="Prices Profiles", background_fill_color="#fafafa", plot_height=600,
+#                       x_axis_label=x_label, y_axis_label=y_label)
+#
+#     return p_demand, p_prices
 
+
+def view_results(date_folder, time_folder, res_folder):
     # ------------------------------ 1. draw widgets ------------------------------ #
     # 1.1 header
     header_date, header_time, header_algorithm, header_note \
@@ -154,15 +177,15 @@ def view_results(date_folder, time_folder, res_folder):
 
     # 1.2 summary tab
 
-    # 1.3 data Tab
-    data_radio_button_group, data_table, source_datatable = make_data_tab()
+    # 1.3 overview Tab
+    data_radio_button_group, data_table, source_datatable = make_overview_tab()
     layout_data = layout([
         [data_radio_button_group],
         [data_table]
     ], sizing_mode='scale_width')
-    tab_data = Panel(child=layout_data, title='Data')
+    tab_data = Panel(child=layout_data, title='Overview')
 
-    # 1.4 graph Tab
+    # 1.4 cost, max demand, prices and demands tab
     source_combined = ColumnDataSource()
     source_heatmap_demand = ColumnDataSource()
     source_heatmap_price = ColumnDataSource()
@@ -184,9 +207,16 @@ def view_results(date_folder, time_folder, res_folder):
     row1 = row(plot_line_cost, plot_heatmap_demand)
     row2 = row(plot_line_demand_max, plot_heatmap_price)
     layout_graph = layout(column([row1, row2]), sizing_mode='stretch_both')
-    tab_graph = Panel(child=layout_graph, title='Graph')
+    tab_graph = Panel(child=layout_graph, title='Cost, Max demand, Demands and Prices')
 
-    # 1.5 overall layout all
+    # 1.5 demands and prices line charts
+    # source_line_demands = ColumnDataSource()
+    # source_line_prices = ColumnDataSource()
+    # plot_demands, plot_prices = make_demand_price_tab(source_line_demands, source_line_prices)
+    # layout_demands_prices = layout(row(plot_demands, plot_prices, sizing_mode='scale_both'))
+    # tab_demands_prices = Panel(child=layout_demands_prices, title='Demands and Prices')
+
+    # 1.6 overall layout all
     tabs = Tabs(tabs=[tab_data, tab_graph], sizing_mode='scale_both')
     layout_overall = layout([
         header_row,
@@ -197,6 +227,7 @@ def view_results(date_folder, time_folder, res_folder):
     prices_dict = dict()
     demands_prices_fw_dict = dict()
     others_combined_dict = dict()
+    summary_dict = dict()
 
     def update_heatmap(chosen_algorithm, k0_label, source, plot, mapper, chart, colour_bar):
         data = demands_prices_fw_dict[k0_label][chosen_algorithm]
@@ -217,22 +248,30 @@ def view_results(date_folder, time_folder, res_folder):
 
     def update_line_chart(chosen_algorithm):
         source_combined.data = others_combined_dict[chosen_algorithm]
+        # plot_line_cost.y_range = Range1d(0, int(source_combined.data[k0_cost].max() * 1.1))
         plot_line_cost.update()
+
+        # plot_line_demand_max.y_range = Range1d(0, int(source_combined.data[k0_demand_max].max() + 1))
         plot_line_demand_max.update()
 
     def update_data_table(active_radio_button, chosen_algorithm):
-
-        if active_radio_button == 1:  # demand
-            source_datatable.data = demands_prices_fw_dict[k0_demand][chosen_algorithm]
-        if active_radio_button == 2:  # prices
-            source_datatable.data = demands_prices_fw_dict[k0_prices][chosen_algorithm]
-        if active_radio_button == 0:  # others
+        if active_radio_button == 0:  # summary
+            source_datatable.data = pd.DataFrame.from_dict(summary_dict, orient='index')
+        elif active_radio_button == 1:  # statistics
             source_datatable.data = others_combined_dict[chosen_algorithm]
+        elif active_radio_button == 2:  # demand
+            source_datatable.data = demands_prices_fw_dict[k0_demand][chosen_algorithm]
+        elif active_radio_button == 3:  # prices
+            source_datatable.data = demands_prices_fw_dict[k0_prices][chosen_algorithm]
 
         columns_keys = source_datatable.data.keys()
-        table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
-                                     formatter=NumberFormatter(format="0,0.00", text_align="right"))
-                         for i in columns_keys]
+        if active_radio_button == 0:
+            table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize())
+                             for i in columns_keys]
+        else:
+            table_columns = [TableColumn(field=str(i), title=str(i).replace("_", " ").capitalize(),
+                                         formatter=NumberFormatter(format="0,0.00", text_align="right"))
+                             for i in columns_keys]
         data_table.columns = table_columns
         data_table.update()
 
@@ -247,16 +286,21 @@ def view_results(date_folder, time_folder, res_folder):
         time_t = new_time
         date_time_folder = results_folder + "{}/{}/".format(date_t, time_t)
 
-        f = open(date_time_folder + 'summary.txt', 'r+')
+        f = open(date_time_folder + 'note.txt', 'r+')
         str_summary = f.read()
         f.close()
         header_note.text = str_summary
 
+        with open(date_time_folder + "summary.pkl", 'rb') as f2:
+            summary = pickle.load(f2)
+            f2.close()
+        to_pd(summary, summary_dict)
+
+        # df.columns = [str(x) for x in range(len(area_res[k0][k1][0]))]
+
         with open(date_time_folder + "area_output.pkl", 'rb') as f2:
             area_res = pickle.load(f2)
             f2.close()
-
-        k0_keys = [k0_demand]
         k1_scheduling_ks = []
         k1_pricing_fw_ks = []
         all_labels = area_res[k0_demand].keys()
@@ -266,17 +310,15 @@ def view_results(date_folder, time_folder, res_folder):
             else:
                 k1_scheduling_ks.append(label)
 
-        dict_to_pd_dt(area_res, prices_dict, k0_keys, k1_scheduling_ks)
-
-        k0_keys = [k0_demand, k0_prices]
-        dict_to_pd_dt(area_res, demands_prices_fw_dict, k0_keys, k1_pricing_fw_ks)
+        dict_to_pd_dt(area_res, prices_dict, [k0_demand], k1_scheduling_ks)
+        dict_to_pd_dt(area_res, demands_prices_fw_dict, [k0_demand, k0_prices], k1_pricing_fw_ks)
 
         k0_keys = [k0_demand_max, k0_par, k0_obj, k0_cost, k0_penalty, k0_step]
         if k0_time in area_res:
             k0_keys.append(k0_time)
         if k0_demand_total in area_res:
             k0_keys.append(k0_demand_total)
-        combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_pricing_fw_ks)
+        combine_dict_to_pd_dt(area_res, others_combined_dict, k0_keys, k1_scheduling_ks, k1_pricing_fw_ks)
 
         return k1_scheduling_ks, k1_pricing_fw_ks
 
@@ -333,7 +375,7 @@ def view_results(date_folder, time_folder, res_folder):
     callback_update_header_time_options(None, None, start_date)
     callback_update_data_source(None, None, start_time)
     callback_switch_algorithm(None, None, header_algorithm.value)
-    callback_update_data_table(None, None, 0)
+    # callback_update_data_table(None, None, 0)
 
 
 view_results(exp_date, exp_time, results_folder)
