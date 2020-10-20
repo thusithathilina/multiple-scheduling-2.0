@@ -1,13 +1,13 @@
 from scripts.csv_to_dict_converter import convert_from_csv
 from scripts.data_mode import DataMode
-from scripts.fdia_integrator import fdia_inject
+from scripts.fdia_integrator import fdia_inject, fdia_analyse_impact
 from scripts.iteration import *
 from scripts.input_parameter import *
 from scripts.output_results import write_results
 
 
 def experiment(num_households, num_tasks_min, num_tasks_max, data_mode, cost_type, algorithms_labels, experiment_folder,
-               enable_fdia=False, injection_percentage=0):
+               job_file=None, enable_fdia=False, injection_percentage=0, attack_result_file_prepend=''):
 
     print("---------- Experiment Summary ----------")
     str_note = "{0} households, min {1} tasks per household, {2} cost function, {3} care factor weight" \
@@ -25,17 +25,17 @@ def experiment(num_households, num_tasks_min, num_tasks_max, data_mode, cost_typ
         households, area = area_read(file_household_area_folder)
         print("Household data read...")
     else:
-        households, area = convert_from_csv('data/2017-06-01_avg.csv', algorithms_labels, no_intervals_periods)
-
-    # FDIA injection
-    if enable_fdia:
-        households, area = fdia_inject(households, area, list(algorithms_labels)[0], injection_percentage)
+        households, area = convert_from_csv(job_file, algorithms_labels, no_intervals_periods)
 
     k1_temp = list(algorithms_labels)[0]
     demand_level_scale = area[k1_temp][k0_demand_max][0] * pricing_table_weight
     models, solvers, pricing_table \
         = read_data(file_cp_pre, file_cp_ini, file_pricing_table, demand_level_scale, zero_digit)
     print("Pricing table created...")
+
+    # FDIA injection
+    if enable_fdia and injection_percentage > 0:
+        households, area = fdia_inject(households, area, list(algorithms_labels)[0], injection_percentage)
 
     for alg in algorithms_labels.values():
         print("---------- Iteration Begin! ----------")
@@ -53,5 +53,10 @@ def experiment(num_households, num_tasks_min, num_tasks_max, data_mode, cost_typ
 
     exp_summary = write_results(key_parameters, area, experiment_folder, str_note)
     print("Results saved to files...")
+
+    if enable_fdia:
+        fdia_analyse_impact(households, area, list(algorithms_labels)[0], num_iterations, pricing_table,
+                            cost_function_type, injection_percentage, attack_result_file_prepend)
+
     return exp_summary
 

@@ -106,7 +106,7 @@ def household_heuristic_solving(num_intervals, durations, demands, predecessors,
         try:
             feasible_min_cost = min([task_costs[f] for f in feasible_intervals])
             cheapest_intervals = [f for f in feasible_intervals if task_costs[f] == feasible_min_cost]
-            a_start = r.choice(cheapest_intervals)
+            a_start = cheapest_intervals[0]#r.choice(cheapest_intervals)
 
             # check max demand constraint
             max_demand_starts = dict()

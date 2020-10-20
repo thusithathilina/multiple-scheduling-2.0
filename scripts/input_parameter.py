@@ -33,6 +33,7 @@ file_household_area_folder = parent_folder + 'data/'
 file_probability = parent_folder + 'data/probability.csv'
 file_demand_list = parent_folder + 'data/demands_list.csv'
 result_folder = parent_folder + "results/"
+attack_result_folder = parent_folder + "attack_results/"
 
 # summary related parameters
 k0_area = "area"
