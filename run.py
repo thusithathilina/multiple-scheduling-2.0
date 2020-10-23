@@ -28,7 +28,7 @@ this_date = str(date.today())
 this_time = str(datetime.now().time().strftime("%H-%M-%S"))
 date_folder = result_folder + "{}/".format(this_date)
 date_time_folder = date_folder + "{}/".format(this_time)
-attack_result_file_prepend = this_date + "_" + this_time
+attack_result_file_prepend = this_date# + "_" + this_time
 
 experiment_summary_dict = dict()
 group_by_columns = [k0_households_no, k0_tasks_no, "algorithm", k0_penalty_weight, k0_cost_type]

@@ -42,6 +42,9 @@ def convert_from_csv(path, algorithms_labels, num_intervals_periods, care_f_max=
         community.append(household)
         file.close()
 
+    if len(community[0]) == 0:
+        del community[0]
+
     household_profile = [0] * no_intervals
     area_demand_profile = [0] * no_intervals
     h = 0
@@ -57,7 +60,7 @@ def convert_from_csv(path, algorithms_labels, num_intervals_periods, care_f_max=
         households[household_key]["psts"] = [job['pstart'] for job in household]
         households[household_key]["cfs"] = [job['caf'] * care_f_max for job in household]
         households[household_key]["precs"] = dict()
-        households[household_key]["succ_delays"] = dict
+        households[household_key]["succ_delays"] = dict()
         households[household_key]["no_prec"] = 0
 
         for job in household:
